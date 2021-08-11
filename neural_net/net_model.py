@@ -11,7 +11,7 @@ History:
 """
 
 from keras.models import Sequential, Model
-from keras.layers import Lambda, Dropout, Flatten, Dense, Activation, concatenate
+from keras.layers import Lambda, Dropout, Flatten, Dense, Activation, concatenate, Concatenate
 from keras.layers import Conv2D, Convolution2D, MaxPooling2D, BatchNormalization, Input
 from keras import losses, optimizers
 import keras.backend as K
@@ -60,6 +60,91 @@ def model_jaerock():
         Dense(50),
         Dense(10),
         Dense(config['num_outputs'])], name='fc_str')
+
+def model_epilot():
+    img_str_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    img_tb_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    vel_shape = (1,)
+    ######str model#######
+    img_str = Input(shape=img_str_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
+    conv_1 = Conv2D(24, (5, 5), strides=(2,2))(lamb)
+    conv_2 = Conv2D(36, (5, 5), strides=(2,2))(conv_1)
+    conv_3 = Conv2D(48, (5, 5), strides=(2,2))(conv_2)
+    conv_4 = Conv2D(64, (3, 3))(conv_3)
+    conv_5 = Conv2D(64, (3, 3), name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, name='fc_1')(flat)
+        
+    ######brk, thr model#######
+    img_tb = Input(shape=img_tb_shape)
+    lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+    conv_c_1 = Conv2D(24, (5, 5), strides=(2,2))(lamb_c)
+    conv_c_2 = Conv2D(36, (5, 5), strides=(2,2))(conv_c_1)
+    conv_c_3 = Conv2D(48, (5, 5), strides=(2,2))(conv_c_2)
+    conv_c_4 = Conv2D(64, (3, 3))(conv_c_3)
+    conv_c_5 = Conv2D(64, (3, 3), name='conv2d_c_last')(conv_c_4)
+    flat_c = Flatten()(conv_c_5)
+    fc_c_1 = Dense(100, name='fc_c_1')(flat_c)
+    
+    ########concat##########
+    concat  = Concatenate()([fc_1, fc_c_1])
+    
+    #######str model#########
+    fc_2 = Dense(50, name='fc_2')(concat)
+    fc_3 = Dense(10, name='fc_3')(fc_2)
+    fc_str = Dense(1, name='fc_str')(fc_3)
+    
+    ######brk, thr model#######
+    vel = Input(shape=vel_shape)
+    fc_c_2 = Dense(50, name='fc_c_2')(concat)
+    concat_vel = Concatenate()([fc_c_2, vel])
+    fc_c_3 = Dense(20, name='fc_c_3')(concat_vel)
+    fc_t = Dense(1, name='fc_t')(fc_c_3)
+    fc_b = Dense(1, name='fc_b')(fc_c_3)
+    
+    # concat_result = Concatenate()([fc_str, fc_tb])
+    
+    
+    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
+
+    return model
+    
+def model_pilot_vel():
+    img_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    vel_shape = (1,)
+    ######img model#######
+    img_input = Input(shape=img_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (5, 5), strides=(2,2))(lamb)
+    conv_2 = Conv2D(36, (5, 5), strides=(2,2))(conv_1)
+    conv_3 = Conv2D(48, (5, 5), strides=(2,2))(conv_2)
+    conv_4 = Conv2D(64, (3, 3))(conv_3)
+    conv_5 = Conv2D(64, (3, 3), name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, name='fc_1')(flat)
+    fc_2 = Dense(50, name='fc_2')(fc_1)
+    
+    ######vel model#######
+    vel_input = Input(shape=vel_shape)
+    
+    ######concat##########
+    concat_img_vel = concatenate([fc_2, vel_input])
+    fc_3 = Dense(10, name='fc_3')(concat_img_vel)
+    fc_str = Dense(1, name='fc_str')(fc_3)
+    fc_t = Dense(1, name='fc_t')(fc_3)
+    fc_b = Dense(1, name='fc_b')(fc_3)
+    
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_t, fc_b])
+
+    return model
+
     
 def model_jaerock_vel():
     img_shape = (config['input_image_height'],
@@ -1014,6 +1099,12 @@ class NetModel:
             self.model = model_jaerock_vel()
         elif config['network_type'] == const.NET_TYPE_JAEROCK_ELU_360:
             self.model = model_jaerock_elu()
+        elif config['network_type'] == const.NET_TYPE_JAEROCK_ELU_360:
+            self.model = model_jaerock_elu()
+        elif config['network_type'] == const.NET_TYPE_PILOT_VEL:
+            self.model = model_pilot_vel()
+        elif config['network_type'] == const.NET_TYPE_EPILOT:
+            self.model = model_epilot()
         elif config['network_type'] == const.NET_TYPE_SAP:
             self.model = model_sap()
         elif config['network_type'] == const.NET_TYPE_DAVE2SKY:

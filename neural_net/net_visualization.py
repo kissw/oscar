@@ -32,6 +32,10 @@ def model_list():
         model = net_model.model_jaerock_vel()
     elif config['network_type'] == const.NET_TYPE_JAEROCK_ELU_360:
         model = net_model.model_jaerock_elu()
+    elif config['network_type'] == const.NET_TYPE_EPILOT:
+        model = net_model.model_epilot()
+    elif config['network_type'] == const.NET_TYPE_PILOT_VEL:
+        model = net_model.model_pilot_vel()
     elif config['network_type'] == const.NET_TYPE_SAP:
         model = net_model.model_sap()
     elif config['network_type'] == const.NET_TYPE_DAVE2SKY:
