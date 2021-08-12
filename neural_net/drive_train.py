@@ -369,6 +369,10 @@ class DriveTrain:
                             # print("vel", X_train_vel.shape)
                             X_train = [X_train_str, X_train_tb, X_train_vel]
                             # print(np.array(X_train).shape)
+                        if config['network_type'] == 6:
+                            X_train_origin = np.array(images)
+                            X_train = [X_train_origin, X_train_tb, X_train_vel]
+
                         if config['num_outputs'] == 3:
                             y_train_str = np.array(str).reshape(-1,1)
                             y_train_t = np.array(thr).reshape(-1,1)
@@ -426,7 +430,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=12)
+                workers=48)
         
     ###########################################################################
     #

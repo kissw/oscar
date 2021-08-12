@@ -1103,6 +1103,8 @@ class NetModel:
             self.model = model_jaerock_elu()
         elif config['network_type'] == const.NET_TYPE_PILOT_VEL:
             self.model = model_pilot_vel()
+        elif config['network_type'] == const.NET_TYPE_EPILOT_IMG:
+            self.model = model_epilot()
         elif config['network_type'] == const.NET_TYPE_EPILOT:
             self.model = model_epilot()
         elif config['network_type'] == const.NET_TYPE_SAP:
