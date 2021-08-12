@@ -34,6 +34,8 @@ def model_list():
         model = net_model.model_jaerock_elu()
     elif config['network_type'] == const.NET_TYPE_EPILOT:
         model = net_model.model_epilot()
+    elif config['network_type'] == const.NET_TYPE_EPILOT_LSTM:
+        model = net_model.model_epilot_lstm()
     elif config['network_type'] == const.NET_TYPE_PILOT_VEL:
         model = net_model.model_pilot_vel()
     elif config['network_type'] == const.NET_TYPE_SAP:

@@ -30,13 +30,17 @@ class DriveRun:
     def run(self, input): # input is (image, (vel))
         
         image = input[0]
+        np_img = np.expand_dims(image, axis=0)
         if Config.neural_net['num_inputs'] == 2:
             velocity = input[1]
-        np_img = np.expand_dims(image, axis=0)
-        
-        if Config.neural_net['num_inputs'] == 2:
             velocity = np.array(velocity).reshape(-1, 1)
             predict = self.net_model.model.predict([np_img, velocity])
+        if Config.neural_net['num_inputs'] == 3:
+            image_tb = input[1]
+            np_img_tb = np.expand_dims(image_tb, axis=0)
+            velocity = input[2]
+            velocity = np.array(velocity).reshape(-1, 1)
+            predict = self.net_model.model.predict([np_img, np_img_tb, velocity])
         else:
             predict = self.net_model.model.predict(np_img)
         # calc scaled steering angle
