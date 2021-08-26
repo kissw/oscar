@@ -29,7 +29,7 @@ samples_per_bin: 4000
 # training 
 # data_shuffle: True
 validation_rate: 0.3 #if data_split is True
-num_epochs: 2000
+num_epochs: 1
 batch_size: 16
 num_inputs: 3     # input: image, velocity
 num_outputs: 3    # output: steering_angle, throttle

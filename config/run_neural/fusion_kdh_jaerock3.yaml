@@ -28,4 +28,4 @@ lstm_dataterm : 1
 scale_factor_throttle: 1
 scale_factor_steering: 1
 
-ai_chauffeur : False
+ai_chauffeur: False

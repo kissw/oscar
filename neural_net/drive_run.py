@@ -31,21 +31,44 @@ class DriveRun:
         
         image = input[0]
         np_img = np.expand_dims(image, axis=0)
-        if Config.neural_net['num_inputs'] == 2:
-            velocity = input[1]
-            velocity = np.array(velocity).reshape(-1, 1)
-            predict = self.net_model.model.predict([np_img, velocity])
-        if Config.neural_net['num_inputs'] == 3:
-            image_tb = input[1]
-            np_img_tb = np.expand_dims(image_tb, axis=0)
-            velocity = input[2]
-            velocity = np.array(velocity).reshape(-1, 1)
-            predict = self.net_model.model.predict([np_img, np_img_tb, velocity])
-        else:
-            predict = self.net_model.model.predict(np_img)
-        # calc scaled steering angle
-        steering_angle = predict[0][0]
-        steering_angle /= Config.neural_net['steering_angle_scale']
-        predict[0][0] = steering_angle
+        if Config.neural_net['lstm'] is False:
+            if Config.neural_net['num_inputs'] == 2:
+                velocity = input[1]
+                velocity = np.array(velocity).reshape(-1, 1)
+                predict = self.net_model.model.predict([np_img, velocity])
+            elif Config.neural_net['num_inputs'] == 3:
+                image_tb = input[1]
+                np_img_tb = np.expand_dims(image_tb, axis=0)
+                velocity = input[2]
+                velocity = np.array(velocity).reshape(-1, 1)
+                predict = self.net_model.model.predict([np_img, np_img_tb, velocity])
+            else:
+                predict = self.net_model.model.predict(np_img)
+            # calc scaled steering angle
+            steering_angle = predict[0][0]
+            steering_angle /= Config.neural_net['steering_angle_scale']
+            predict[0][0] = steering_angle
 
-        return predict
+            return predict
+        else:
+            image_tb = input[1]
+            vel = input[2]
+            np_img = np_img.reshape(-1, 
+                                                    Config.neural_net['lstm_timestep'], 
+                                                    Config.neural_net['input_image_height'],
+                                                    Config.neural_net['input_image_width'],
+                                                    Config.neural_net['input_image_depth'])
+            npimg_tb = np.expand_dims(image, axis=0).reshape(-1, 
+                                                    Config.neural_net['lstm_timestep'], 
+                                                    Config.neural_net['input_image_height'],
+                                                    Config.neural_net['input_image_width'],
+                                                    Config.neural_net['input_image_depth'])
+            npvel = np.expand_dims(vel, axis=0).reshape(-1,
+                                                        Config.neural_net['lstm_timestep'],
+                                                        1)
+            predict = self.net_model.model.predict([np_img, npimg_tb, npvel])
+            steering_angle = predict[0][0]
+            steering_angle /= Config.neural_net['steering_angle_scale']
+            predict[0][0] = steering_angle
+
+            return predict
