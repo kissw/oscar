@@ -26,6 +26,8 @@ NET_TYPE_CONJOIN_T  = 16
 NET_TYPE_PILOTwL    = 22
 NET_TYPE_ALEXwL_T   = 25
 
+NET_TYPE_DST_L        = 100
+NET_TYPE_DST_R        = 101
 # file extension
 DATA_EXT             = '.csv'
 IMAGE_EXT            = '.jpg'

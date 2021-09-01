@@ -382,6 +382,32 @@ def model_pilotnet_lstm():
     
     return model
 
+
+def model_dst_lstm():
+
+    # redefine input_shape to add one more dims
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+    
+    input_img = Input(shape=img_shape, name='input_image')
+    lamb      = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0), name='lamb_img')(input_img)
+    conv_1    = TimeDistributed(Convolution2D(24, (5, 5), activation='relu', strides=(2,2)), name='conv_1')(lamb)
+    conv_2    = TimeDistributed(Convolution2D(36, (5, 5), activation='relu', strides=(2,2)), name='conv_2')(conv_1)
+    conv_3    = TimeDistributed(Convolution2D(48, (5, 5), activation='relu', strides=(2,2)), name='conv_3')(conv_2)
+    conv_4    = TimeDistributed(Convolution2D(64, (3, 3), activation='relu'), name='conv_4')(conv_3)
+    conv_5    = TimeDistributed(Convolution2D(64, (3, 3), activation='relu'), name='conv2d_last')(conv_4)
+    flat      = TimeDistributed(Flatten(), name='flat')(conv_5)
+    lstm      = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1      = Dense(100, activation='relu', name='fc_1')(lstm)
+    fc_2      = Dense( 50, activation='relu', name='fc_2')(fc_1)
+    fc_3      = Dense( 10, activation='relu', name='fc_3')(fc_2)
+    fc_last   = Dense(config['num_outputs'], activation='linear', name='fc_last')(fc_3)
+
+    model = Model(inputs=input_img, outputs=fc_last)
+    
+    return model
+
 def model_alexnet_t_lstm():
     
     img_shape = (None, config['input_image_height'],
@@ -458,6 +484,11 @@ class NetModel:
             self.model = model_pilotnet_lstm()
         elif config['network_type'] == const.NET_TYPE_ALEXwL_T:
             self.model = model_alexnet_t_lstm()
+        elif config['network_type'] == const.NET_TYPE_DST_L:
+            self.model = model_dst_lstm()
+        elif config['network_type'] == const.NET_TYPE_DST_R:
+            self.model = model_dst_lstm()
+        
         else:
             exit('ERROR: Invalid neural network type.')
 

@@ -7,13 +7,13 @@ version: 0.92
 ######################################################
 ## neural network 
 load_weight: False
-network_type: 27       # refer to neural_net/const.py
+network_type: 101       # refer to neural_net/const.py
 lstm: True
 
 ## lstm model
-lstm_timestep: 5
+lstm_timestep: 30
 lstm_dataterm: 1
-lstm_lr: 0.0001        # 
+lstm_lr: 0.00001        # 
 ## cnn model
 cnn_lr:  0.0001          # default of Adam is 0.001
 
@@ -24,7 +24,7 @@ normalize_data: False
 samples_per_bin: 4000
 
 # training 
-gpus: 1
+gpus: 0
 num_epochs: 2000
 batch_size: 16
 decay: 0.0000001  # lstm = 1e-9, cnn = 1e-7 0.00000001
