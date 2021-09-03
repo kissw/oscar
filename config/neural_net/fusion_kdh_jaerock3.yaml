@@ -7,8 +7,8 @@ version: 0.92
 ######################################################
 ## neural network 
 load_weight: False
-network_type: 101       # refer to neural_net/const.py
-lstm: True
+network_type: 102       # refer to neural_net/const.py
+lstm: False
 
 ## lstm model
 lstm_timestep: 30
@@ -25,12 +25,15 @@ samples_per_bin: 4000
 
 # training 
 gpus: 0
-num_epochs: 2000
-batch_size: 16
+num_epochs: 200000
+batch_size: 256
 decay: 0.0000001  # lstm = 1e-9, cnn = 1e-7 0.00000001
 num_inputs: 1     # input: image, velocity
 num_outputs: 1    # output: steering_angle, throttle
-early_stopping_patience: 50
+early_stopping_patience: 20000
+save_freq: 100
+
+loss_function: sparse_cc #mse or sparse_cc
 
 # tensorboard log dir
 tensorboard_log_dir: logs/scalars/

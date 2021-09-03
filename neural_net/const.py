@@ -28,6 +28,7 @@ NET_TYPE_ALEXwL_T   = 25
 
 NET_TYPE_DST_L        = 100
 NET_TYPE_DST_R        = 101
+NET_TYPE_DST_Classfier= 102
 # file extension
 DATA_EXT             = '.csv'
 IMAGE_EXT            = '.jpg'

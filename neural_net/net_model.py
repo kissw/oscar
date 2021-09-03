@@ -408,6 +408,24 @@ def model_dst_lstm():
     
     return model
 
+
+def model_dst_classifier():
+
+    # redefine input_shape to add one more dims
+    img_shape = (100,)
+    
+    input_img = Input(shape=img_shape, name='input_image')
+    fc_1      = Dense(1000, activation='elu', name='fc_1')(input_img)
+    fc_2      = Dense(1000, activation='elu', name='fc_2')(fc_1)
+    fc_3      = Dense(1000, activation='elu', name='fc_3')(fc_2)
+    fc_4      = Dense(100, activation='elu', name='fc_4')(fc_3)
+    fc_last   = Dense(2, activation='softmax', name='fc_last')(fc_4)
+    
+    model = Model(inputs=input_img, outputs=fc_last)
+    
+    return model
+
+
 def model_alexnet_t_lstm():
     
     img_shape = (None, config['input_image_height'],
@@ -488,6 +506,8 @@ class NetModel:
             self.model = model_dst_lstm()
         elif config['network_type'] == const.NET_TYPE_DST_R:
             self.model = model_dst_lstm()
+        elif config['network_type'] == const.NET_TYPE_DST_Classfier:
+            self.model = model_dst_classifier()
         
         else:
             exit('ERROR: Invalid neural network type.')
@@ -513,10 +533,14 @@ class NetModel:
         else:
             learning_rate = config['cnn_lr']
         decay = config['decay']
-        self.model.compile(loss=losses.mean_squared_error,
-                    optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
-                    metrics=['accuracy'])
-
+        if config['loss_function'] is 'mse':
+            self.model.compile(loss=losses.mean_squared_error,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
+        elif config['loss_function'] is 'sparse_cc':
+            self.model.compile(loss=losses.sparse_categorical_crossentropy,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
 
     ###########################################################################
     #
