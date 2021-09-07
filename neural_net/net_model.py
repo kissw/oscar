@@ -410,21 +410,63 @@ def model_dst_lstm():
 
 
 def model_dst_classifier():
-
+    
     # redefine input_shape to add one more dims
     img_shape = (100,)
     
     input_img = Input(shape=img_shape, name='input_image')
-    fc_1      = Dense(1000, activation='elu', name='fc_1')(input_img)
-    fc_2      = Dense(1000, activation='elu', name='fc_2')(fc_1)
-    fc_3      = Dense(1000, activation='elu', name='fc_3')(fc_2)
-    fc_4      = Dense(100, activation='elu', name='fc_4')(fc_3)
-    fc_last   = Dense(2, activation='softmax', name='fc_last')(fc_4)
+    fc_1      = Dense(1000, activation='relu', name='fc_1')(input_img)
+    do_1      = Dropout(0.2)(fc_1, training=False)
+    fc_2      = Dense(1000, activation='relu', name='fc_2')(do_1)
+    do_2      = Dropout(0.2)(fc_2, training=False)
+    fc_3      = Dense(1000, activation='relu', name='fc_3')(do_2)
+    do_3      = Dropout(0.2)(fc_3, training=False)
+    fc_4      = Dense(100, activation='relu', name='fc_4')(do_3)
+    fc_last   = Dense(1, activation='sigmoid', name='fc_last')(fc_4)
     
     model = Model(inputs=input_img, outputs=fc_last)
     
     return model
 
+# def model_dst_classifier():
+    
+#     # redefine input_shape to add one more dims
+#     img_shape = (100,)
+    
+#     input_img = Input(shape=img_shape, name='input_image')
+#     fc_1      = Dense(1000, activation='elu', name='fc_1')(input_img)
+#     do_1      = Dropout(0.2)(fc_1)
+#     fc_2      = Dense(1000, activation='elu', name='fc_2')(do_1)
+#     do_2      = Dropout(0.2)(fc_2)
+#     fc_3      = Dense(1000, activation='elu', name='fc_3')(do_2)
+#     do_3      = Dropout(0.2)(fc_3)
+#     fc_4      = Dense(100, activation='elu', name='fc_4')(do_3)
+#     fc_last   = Dense(2, activation='softmax', name='fc_last')(fc_4)
+    
+#     model = Model(inputs=input_img, outputs=fc_last)
+    
+#     return model
+
+def model_dst_classifier_2():
+    
+    # redefine input_shape to add one more dims
+    img_shape = (100,)
+    str_shape = (1,)
+    input_img = Input(shape=img_shape, name='input_image')
+    input_str = Input(shape=str_shape, name='input_str')
+    concat    = Concatenate()([input_img, input_str])
+    fc_1      = Dense(1000, activation='elu', name='fc_1')(concat)
+    do_1      = Dropout(0.2)(fc_1)
+    fc_2      = Dense(1000, activation='elu', name='fc_2')(do_1)
+    do_2      = Dropout(0.2)(fc_2)
+    fc_3      = Dense(1000, activation='elu', name='fc_3')(do_2)
+    do_3      = Dropout(0.2)(fc_3)
+    fc_4      = Dense(100, activation='elu', name='fc_4')(do_3)
+    fc_last   = Dense(2, activation='softmax', name='fc_last')(fc_4)
+    
+    model = Model(inputs=[input_img, input_str], outputs=fc_last)
+    
+    return model
 
 def model_alexnet_t_lstm():
     
@@ -535,6 +577,10 @@ class NetModel:
         decay = config['decay']
         if config['loss_function'] is 'mse':
             self.model.compile(loss=losses.mean_squared_error,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
+        elif config['loss_function'] is 'mae':
+            self.model.compile(loss=losses.mean_absolute_error,
                         optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
                         metrics=['accuracy'])
         elif config['loss_function'] is 'sparse_cc':
