@@ -311,7 +311,7 @@ It is also possible to visualize collected data with other information without s
 <br>
 
 ```
-(oscar) $ rosrun mapinfo_generator mapinfo_generator.py path/to/csv {right|left|center} 
+(oscar) $ rosrun eval_perf eval_perf.py path/to/csv {right|left|center} 
 ```
 위 명령어를 실행하게되면 여러 지표를 통해 자율주행 네트워크의 성능을 측정한 결과가 .csv, .txt 형태로 csv 파일이 위치한 경로에 저장됩니다.
 

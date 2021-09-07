@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mapinfo_generator</name>
+  <name>eval_perf</name>
   <version>0.0.0</version>
-  <description>The mapinfo_generator package</description>
+  <description>The eval_perf package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

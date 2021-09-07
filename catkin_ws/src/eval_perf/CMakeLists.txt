@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mapinfo_generator)
+project(eval_perf)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -106,7 +106,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES mapinfo_generator
+#  LIBRARIES eval_perf
  CATKIN_DEPENDS rospy std_msgs
 #  DEPENDS system_lib
 )
