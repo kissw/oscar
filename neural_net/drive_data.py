@@ -23,12 +23,12 @@ class DriveData:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 'brake', 
                     'linux_time', 
                     'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y']
+                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y', 'delta_steering_angle', 'delta_throttle']
     else:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 
                     'linux_time', 
                     'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z' ]
+                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y']
 
     def __init__(self, csv_fname):
         self.csv_fname = csv_fname
@@ -39,6 +39,7 @@ class DriveData:
         self.velocities = []
         self.velocities_xyz = []
         self.positions_xyz = []
+        self.delta = []
 
     def read(self, read = True, show_statistics = True, normalize = True):
         self.df = pd.read_csv(self.csv_fname, names=self.csv_header, index_col=False)
@@ -135,6 +136,8 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
+                self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
+                                            float(self.df.loc[i]['delta_throttle'])))
 
 
     def get_data_path(self):

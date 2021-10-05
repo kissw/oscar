@@ -23,6 +23,7 @@ from config import Config
 
 config = Config.neural_net
 config_rn = Config.run_neural
+
 def model_pilot_delta():
     from keras.layers.recurrent import LSTM
     from keras.layers.wrappers import TimeDistributed

@@ -89,8 +89,8 @@ class DriveTrain:
             self.t_data.read()
             self.v_data.read()
             # put velocities regardless we use them or not for simplicity.
-            train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements))
-            valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements))
+            train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.delta))
+            valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.delta))
             if config['lstm'] is True:
                 self.train_data,_ = self._prepare_lstm_data(train_samples)
                 self.valid_data,_ = self._prepare_lstm_data(valid_samples)
@@ -116,27 +116,32 @@ class DriveTrain:
         image_names = []
         measurements = []
         velocities = []
+        deltas = []
         for i in range(0, last_index):
             timestep_samples = samples[ i : i+config['lstm_timestep']*config['lstm_dataterm'] :config['lstm_dataterm']]
             
             timestep_image_names = []
             timestep_measurements = []
             timestep_velocities = []
-            for image_name, velocity, measurment in timestep_samples:
+            timestep_deltas = []
+            for image_name, velocity, measurment, delta in timestep_samples:
                 timestep_image_names.append(image_name)
                 timestep_measurements.append(measurment)
                 timestep_velocities.append(velocity)
+                timestep_deltas.append(delta)
 
             image_names.append(timestep_image_names)
             measurements.append(timestep_measurements)
             velocities.append(timestep_velocities)
+            deltas.append(timestep_deltas)
+            
         if config['data_split'] is True:
             samples = list(zip(image_names, velocities, measurements))
             train_data, valid_data = train_test_split(samples, 
                                         test_size=config['validation_rate'])
         else:
             # put velocities regardless we use them or not for simplicity.
-            train_data = list(zip(image_names, velocities, measurements))
+            train_data = list(zip(image_names, velocities, measurements, deltas))
             train_data = sklearn.utils.shuffle(train_data)
             # print(train_data)
             valid_data = None
@@ -167,20 +172,16 @@ class DriveTrain:
 
         def _prepare_batch_samples(batch_samples, data=None):
             images = []
-            images_str = []
-            images_tb = []
             velocities = []
             measurements = []
-            str = []
-            thr = []
-            brk = []
+            deltas = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
                 data_path = self.t_data_path
             elif data == 'valid':
                 data_path = self.v_data_path
-            for image_name, velocity, measurement in batch_samples:
+            for image_name, velocity, measurement, delta in batch_samples:
                 image_path = data_path + '/' + image_name
                 # print(image_path)
                 image = cv2.imread(image_path)
@@ -193,16 +194,6 @@ class DriveTrain:
                 image = cv2.resize(image, 
                                     (config['input_image_width'],
                                     config['input_image_height']))
-                crop_tb = image[0:30, 0:159]
-                crop_str = image[31:159, 0:159]
-                crop_tb = cv2.resize(crop_tb, 
-                                    (config['input_image_width'],
-                                    config['input_image_height']))
-                crop_str = cv2.resize(crop_str, 
-                                    (config['input_image_width'],
-                                    config['input_image_height']))
-                crop_tb = self.image_process.process(crop_tb)
-                crop_str = self.image_process.process(crop_str)
                 # cv2.imwrite('/mnt/Data/oscar/ictc/test/bt/'+image_name, crop_tb)
                 # cv2.imwrite('/mnt/Data/oscar/ictc/test/str/'+image_name, crop_str)
                 
@@ -210,11 +201,9 @@ class DriveTrain:
                 # if data == 'train':
                 #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
                 images.append(image)
-                images_str.append(crop_str)
-                images_tb.append(crop_tb)
                 
                 velocities.append(velocity)
-
+                deltas.append(delta)
                 # if no brake data in collected data, brake values are dummy
                 steering_angle, throttle, brake = measurement
                 
@@ -225,9 +214,6 @@ class DriveTrain:
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle))
                 if config['num_outputs'] == 3:                
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle, brake))
-                    str.append(steering_angle*config['steering_angle_scale'])
-                    thr.append(throttle)
-                    brk.append(brake)
                 else:
                     measurements.append(steering_angle*config['steering_angle_scale'])
                     # print("1 : ", steering_angle)
@@ -238,39 +224,23 @@ class DriveTrain:
                 if append is True:
                     # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
                     images.append(image)
-                    crop_tb = image[0:50, 0:159]
-                    crop_str = image[51:159, 0:159]
-                    crop_tb = cv2.resize(crop_tb, 
-                                        (config['input_image_width'],
-                                        config['input_image_height']))
-                    crop_str = cv2.resize(crop_str, 
-                                        (config['input_image_width'],
-                                        config['input_image_height']))
-                    images_str.append(crop_str)
-                    images_tb.append(crop_tb)
                     velocities.append(velocity)
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle))
                     elif config['num_outputs'] == 3:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle, brake))
-                        str.append(steering_angle*config['steering_angle_scale'])
-                        thr.append(throttle)
-                        brk.append(brake)
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
 
-            return images, velocities, measurements, images_str, images_tb, str, thr, brk
+            return images, velocities, measurements, deltas
 
         def _prepare_lstm_batch_samples(batch_samples, data=None):
             #images_str, images_tb, str, thr, brk
             images = []
             velocities = []
             measurements = []
-            images_str  = []
-            images_tb   = []
-            str         = []
-            thr         = []
-            brk         = []
+            delta_strs = []
+            delta_thrs = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
@@ -282,11 +252,8 @@ class DriveTrain:
                 image_names_timestep = []
                 velocities_timestep = []
                 measurements_timestep = []
-                images_str_timestep  = []
-                images_tb_timestep   = []
-                str_timestep         = []
-                thr_timestep         = []
-                brk_timestep         = []
+                delta_strs_timestep = []
+                delta_thrs_timestep = []
                 for j in range(0, config['lstm_timestep']):
                     image_name = batch_samples[i][0][j]
                     image_path = data_path + '/' + image_name
@@ -299,16 +266,6 @@ class DriveTrain:
                     image = cv2.resize(image, 
                                     (config['input_image_width'],
                                     config['input_image_height']))
-                    crop_tb = image[0:30, 0:159]
-                    crop_str = image[31:159, 0:159]
-                    crop_tb = cv2.resize(crop_tb, 
-                                        (config['input_image_width'],
-                                        config['input_image_height']))
-                    crop_str = cv2.resize(crop_str, 
-                                        (config['input_image_width'],
-                                        config['input_image_height']))
-                    crop_tb = self.image_process.process(crop_tb)
-                    crop_str = self.image_process.process(crop_str)
                     image = self.image_process.process(image)
                     
                     images_timestep.append(image)
@@ -316,39 +273,37 @@ class DriveTrain:
                     velocity = batch_samples[i][1][j]
                     velocities_timestep.append(velocity)
                     
-                    images_str_timestep.append(crop_str)
-                    images_tb_timestep.append(crop_tb)
-                    
                     if j is config['lstm_timestep']-1:
                         measurement = batch_samples[i][2][j]
+                        delta = batch_samples[i][3][j]
                         # if no brake data in collected data, brake values are dummy
                         steering_angle, throttle, brake = measurement
-                        
+                        delta_str, delta_thr = delta
                         if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
                             steering_angle = 0
                             
-                        if config['num_outputs'] == 2:                
-                            measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
-                        elif config['num_outputs'] == 3:                
-                            measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle, brake))
-                            str_timestep.append(steering_angle*config['steering_angle_scale'])
-                            thr_timestep.append(throttle)
-                            brk_timestep.append(brake)
-                        else:
-                            measurements_timestep.append(steering_angle*config['steering_angle_scale'])
+                        # if config['num_outputs'] == 2:                
+                        #     measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
+                        # elif config['num_outputs'] == 3:                
+                        #     measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle, brake))
+                        # else:
+                        #     measurements_timestep.append(steering_angle*config['steering_angle_scale'])
+                            
+                        if config['network_type'] == 8:
+                            measurements_timestep.append(brake)
+                            delta_strs_timestep.append(delta_str)
+                            delta_thrs_timestep.append(delta_thr)
                 
                 # if data == 'valid':
                 #     print(image_names_timestep)
                 images.append(images_timestep)
                 velocities.append(velocities_timestep)
                 measurements.append(measurements_timestep)
-                images_str.append(images_str_timestep)
-                images_tb.append(images_tb_timestep)
-                str.append(str_timestep)
-                thr.append(thr_timestep)
-                brk.append(brk_timestep)
+                delta_strs.append(delta_strs_timestep)
+                delta_thrs.append(delta_thrs_timestep)
                 
-            return images, velocities, measurements, images_str, images_tb, str, thr, brk
+                
+            return images, velocities, measurements, delta_strs, delta_thrs
         
         def _generator(samples, batch_size=config['batch_size'], data=None):
             num_samples = len(samples)
@@ -357,46 +312,20 @@ class DriveTrain:
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
 
-                        images, velocities, measurements, images_str, images_tb, str, thr, brk = _prepare_lstm_batch_samples(batch_samples, data)
-                        
-                        y_train = np.array(measurements)
-                        if config['num_inputs'] == 1:
-                            X_train = np.array(images)
-                        elif config['num_inputs'] == 2:
+                        images, velocities, measurements, dstr, dthr = _prepare_lstm_batch_samples(batch_samples, data)
+                        if config['network_type'] == 8:
+                            X_train_img = np.array(images)
+                            dstr = np.array(dstr)
+                            dthr = np.array(dthr)
                             X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
-                            X_train = [X_train, X_train_vel]
-                            
-                        elif config['num_inputs'] == 3:
-                            X_train_str = np.array(images_str)
-                            X_train_tb = np.array(images_tb)
-                            X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
-                            # print("str", X_train_str.shape)
-                            # print("tb", X_train_tb.shape)
-                            # print("vel", X_train_vel.shape)
-                            X_train = [X_train_str, X_train_tb, X_train_vel]
-                            # print(np.array(X_train).shape)
-                        if config['network_type'] == 7:
-                            X_train_origin = np.array(images)
-                            X_train = [X_train_origin, X_train_tb, X_train_vel]
-
-                        if config['num_outputs'] == 3:
-                            # print(np.array(str).shape)
-                            y_train_str = np.array(str).reshape(-1,1)
-                            y_train_t = np.array(thr).reshape(-1,1)
-                            y_train_b = np.array(brk).reshape(-1,1)
-                            y_train = [y_train_str, y_train_t, y_train_b]
+                            X_train = [X_train_img, X_train_vel]
+                            y_train_dstr = np.array(dstr).reshape(-1,1)
+                            y_train_dthr = np.array(dthr).reshape(-1,1)
+                            y_train_b = np.array(measurements)
+                            y_train = [y_train_dstr, y_train_dthr, y_train_b]
                             
                         
                         yield X_train, y_train
-                        
-                        # if config['data_aug_bright'] is True: # lstm data augmentation 
-                        #     image_aug = self.data_aug.lstm_brightness(images)
-                        #     X_train = np.array(image_aug).reshape(-1, config['lstm_timestep']
-                        #                                           , config['input_image_height']
-                        #                                           , config['input_image_width']
-                        #                                           , config['input_image_depth'])
-                        #     y_train = np.array(measurements)
-                        #     yield X_train, y_train
                         
                         
                 else: 
@@ -485,7 +414,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=48)
+                workers=10)
         
     ###########################################################################
     #
