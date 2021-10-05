@@ -32,37 +32,47 @@ def model_pilotnet():
                     config['input_image_width'],
                     config['input_image_depth'])
 
-    return Sequential([
-        Lambda(lambda x: x/127.5 - 1.0, input_shape=input_shape),
-        Conv2D(24, (5, 5), strides=(2,2), activation='relu', name='conv2d_1'),
-        Conv2D(36, (5, 5), strides=(2,2), activation='relu', name='conv2d_2'),
-        Conv2D(48, (5, 5), strides=(2,2), activation='relu', name='conv2d_3'),
-        Conv2D(64, (3, 3), activation='relu', name='conv2d_4'),
-        Conv2D(64, (3, 3), activation='relu', name='conv2d_last'),
-        Flatten(),
-        Dense(100, activation='relu', name='fc_1'),
-        Dense(50, activation='relu', name='fc_2'),
-        Dense(10, activation='relu', name='fc_3'),
-        Dense(config['num_outputs'], name='fc_str')])
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (5, 5), strides=(2,2), activation='relu', name='conv2d_1')(lamb)
+    conv_2 = Conv2D(36, (5, 5), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(48, (5, 5), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (3, 3), activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (3, 3), activation='relu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
+    fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
 
 def model_pilotnet_m():
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'])
 
-    return Sequential([
-        Lambda(lambda x: x/127.5 - 1.0, input_shape=input_shape),
-        Conv2D(24, (5, 5), strides=(2,2), activation='elu'),
-        Conv2D(36, (5, 5), strides=(2,2), activation='elu'),
-        Conv2D(48, (5, 5), strides=(2,2), activation='elu'),
-        Conv2D(64, (3, 3), activation='elu'),
-        Conv2D(64, (3, 3), activation='elu', name='conv2d_last'),
-        Flatten(),
-        Dense(1000, activation='elu'),
-        Dense(100, activation='elu'),
-        Dense(50, activation='elu'),
-        Dense(10, activation='elu'),
-        Dense(config['num_outputs'])], name='fc_str')
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (5, 5), strides=(2,2), activation='elu', name='conv2d_1')(lamb)
+    conv_2 = Conv2D(36, (5, 5), strides=(2,2), activation='elu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(48, (5, 5), strides=(2,2), activation='elu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (3, 3), activation='elu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (3, 3), activation='elu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(1000, activation='elu', name='fc_1')(flat)
+    fc_2 = Dense(100 , activation='elu', name='fc_2')(fc_1)
+    fc_3 = Dense(50 , activation='elu', name='fc_3')(fc_2)
+    fc_4 = Dense(10 , activation='elu', name='fc_4')(fc_3)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_4)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
 
 def model_alexnet_m(): 
     img_shape = (config['input_image_height'],
@@ -502,7 +512,7 @@ class NetModel:
     ###########################################################################
     # model_path = '../data/2007-09-22-12-12-12.
     def weight_load(self, load_model_name):
-
+    
         from keras.models import model_from_json
 
         json_string = self.model.to_json()
