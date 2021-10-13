@@ -23,7 +23,7 @@ class DriveData:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 'brake', 
                     'linux_time', 
                     'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y', 'delta_steering_angle', 'delta_throttle']
+                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y', 'delta_steering_angle', 'delta_throttle', 'delta_brake']
     else:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 
                     'linux_time', 
@@ -137,7 +137,8 @@ class DriveData:
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
                 self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
-                                            float(self.df.loc[i]['delta_throttle'])))
+                                            float(self.df.loc[i]['delta_throttle']),
+                                            float(self.df.loc[i]['delta_brake'])))
 
 
     def get_data_path(self):

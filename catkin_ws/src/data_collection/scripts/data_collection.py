@@ -39,10 +39,10 @@ else:
 
 class DataCollection():
     def __init__(self):
-        self.steering = 0
-        self.throttle = 0
-        self.brake = 0
-
+        self.steering = self.throttle = self.brake = 0
+        self.last_steering = self.last_throttle = self.last_brake = 0
+        self.delta_str = self.delta_thr = self.delta_brk = 0
+        self.last_unix_time = 0
         self.vel_x = self.vel_y = self.vel_z = 0
         self.accel_x = self.accel_y = 0
         
@@ -56,26 +56,19 @@ class DataCollection():
 
         # create csv data file
         name_datatime = str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-        #path = '../data/' + sys.argv[1] + '/' + name_datatime + '/'
-        # path = rospy.get_param('path_to_e2e_data', 
-        #                 './e2e_data') + '/' + sys.argv[1] + '/' + name_datatime + '/'
-        if sys.argv[1][-1] is '/':
-            argv = sys.argv[1]
-        else:
-            argv = sys.argv[1] + '/'
-        n = 1
-        is_exist_path = argv + str(Config.neural_net['network_type']) + '/' + str(n) + 'n'
-        path = is_exist_path + '/' + name_datatime + '/'
+        path = '../data/' + sys.argv[1] + '/' + name_datatime + '/'
+        path = rospy.get_param('path_to_e2e_data', 
+                        './e2e_data') + '/' + sys.argv[1] + '/' + name_datatime + '/'
+        # if sys.argv[1][-1] is '/':
+        #     argv = sys.argv[1]
+        # else:
+        #     argv = sys.argv[1] + '/'
+        # n = 1
+        # is_exist_path = argv + str(Config.neural_net['network_type']) + '/' + str(n) + 'n'
+        # path = is_exist_path + '/' + name_datatime + '/'
         
-        if os.path.exists(is_exist_path) is False:
+        if os.path.exists(path) is False:
             print('new folder created: ' + path)
-            os.makedirs(path)
-        else:
-            while(os.path.exists(is_exist_path)):
-                print('path exists. continuing...')
-                n += 1
-                is_exist_path = argv + str(Config.neural_net['network_type']) + '/' + str(n) + 'n'
-                path = is_exist_path + '/' + name_datatime + '/' 
             os.makedirs(path)
 
         self.text = open(str(path) + name_datatime + const.DATA_EXT, "w+")
@@ -91,7 +84,9 @@ class DataCollection():
         self.throttle = value.throttle
         self.steering = value.steer
         self.brake = value.brake
-
+        self.delta_str = self.steering - self.last_steering
+        self.delta_thr = self.throttle - self.last_throttle
+        self.delta_brk = self.brake    - self.last_brake
 
     def pos_vel_cb(self, value):
         self.pos_x = value.pose.pose.position.x 
@@ -121,6 +116,7 @@ class DataCollection():
                           config['image_crop_x1']:config['image_crop_x2']]
 
         unix_time = time.time()
+        
         time_stamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")
         file_full_path = str(self.path) + str(time_stamp) + const.IMAGE_EXT
         if config['crop'] is True:
@@ -128,33 +124,30 @@ class DataCollection():
         else:
             cv2.imwrite(file_full_path, img)
         sys.stdout.write(file_full_path + '\r')
-        if config['version'] >= 0.92:
-            line = "{}{},{},{},{},{},{},{},{},{},{},{},{},{},{}\r\n".format(time_stamp, const.IMAGE_EXT, 
-                                                        self.steering, 
-                                                        self.throttle,
-                                                        self.brake,
-                                                        unix_time,
-                                                        self.vel,
-                                                        self.vel_x,
-                                                        self.vel_y,
-                                                        self.vel_z,
-                                                        self.pos_x,
-                                                        self.pos_y,
-                                                        self.pos_z,
-                                                        self.accel_x,
-                                                        self.accel_y)
-        else:
-            line = "{}{},{},{},{},{},{},{},{},{},{},{}\r\n".format(time_stamp, const.IMAGE_EXT, 
-                                                        self.steering, 
-                                                        self.throttle,
-                                                        unix_time,
-                                                        self.vel,
-                                                        self.vel_x,
-                                                        self.vel_y,
-                                                        self.vel_z,
-                                                        self.pos_x,
-                                                        self.pos_y,
-                                                        self.pos_z)
+        line = "{}{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\r\n".format(time_stamp, const.IMAGE_EXT, 
+                                                    self.steering, 
+                                                    self.throttle,
+                                                    self.brake,
+                                                    unix_time,
+                                                    self.vel,
+                                                    self.vel_x,
+                                                    self.vel_y,
+                                                    self.vel_z,
+                                                    self.pos_x,
+                                                    self.pos_y,
+                                                    self.pos_z,
+                                                    self.accel_x,
+                                                    self.accel_y,
+                                                    self.delta_str,
+                                                    self.delta_thr,
+                                                    self.delta_brk)
+        self.last_steering = self.steering
+        self.last_throttle = self.throttle
+        self.last_brake    = self.brake
+        self.delta_str = 0
+        self.delta_thr = 0
+        self.delta_brk = 0
+        
         self.text.write(line)                                                 
 
 

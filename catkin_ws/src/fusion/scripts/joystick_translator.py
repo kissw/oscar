@@ -46,7 +46,7 @@ SHIFT_REVERSE = 5     # reverse 1
 
 # Max speed and steering factor
 MAX_THROTTLE_FACTOR = 10
-MAX_STEERING_FACTOR = 5
+MAX_STEERING_FACTOR = 0.38
 # Default speed and steering factor
 INIT_THROTTLE_FACTOR = 3
 INIT_STERRING_FACTOR = 1
@@ -91,19 +91,18 @@ class Translator:
         command = Control()
         command.header = message.header
 
-        if message.axes[BRAKE_AXIS] > BRAKE_POINT:
-		    command.brake = 1.0
+        # if message.axes[BRAKE_AXIS] > BRAKE_POINT:
+		#     command.brake = 1.0
 
-        # Note: init value of axes are all zeros
-        # --> problem with -1 to 1 range values like brake
-        if message.axes[BRAKE_AXIS] > -1*SMALL_VALUE and message.axes[BRAKE_AXIS] < SMALL_VALUE:
-		    command.brake = 0.0
-
-        if message.axes[THROTTLE_AXIS] >= 0:
-            command.throttle = message.axes[THROTTLE_AXIS]
-            command.brake = 0.0
-        else:
-            command.throttle = 0.0
+        # # Note: init value of axes are all zeros
+        # # --> problem with -1 to 1 range values like brake
+        # if message.axes[BRAKE_AXIS] > -1*SMALL_VALUE and message.axes[BRAKE_AXIS] < SMALL_VALUE:
+		#     command.brake = 0.0
+        
+        command.throttle = (1 + message.axes[THROTTLE_AXIS])/2
+        command.brake = (1 + message.axes[BRAKE_AXIS])/MAX_STEERING_FACTOR
+        if command.brake > 1.0:
+            command.brake = 1.0
         
         if message.buttons[SHIFT_FORWARD] == 1:
             self.gear = "forward"

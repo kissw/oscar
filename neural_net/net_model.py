@@ -22,48 +22,18 @@ import const
 from config import Config
 
 config = Config.neural_net
-config_rn = Config.run_neural
 
-def model_pilot_delta():
-    from keras.layers.recurrent import LSTM
-    from keras.layers.wrappers import TimeDistributed
-    img_shape = (None, config['input_image_height'],
+def model_epilot():
+    img_str_shape = (config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'],)
-    vel_shape = (None, 1,)
-    ######str model#######
-    img_str = Input(shape=img_shape)
-    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
-    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb)
-    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_1)
-    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_2)
-    conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
-    conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
-    flat = TimeDistributed(Flatten())(conv_5)
-    
-    vel = Input(shape=vel_shape)
-    fc_vel = Dense(50, name='fc_vel')(vel)
-    concat = Concatenate()([flat, fc_vel])
-    
-    lstm = LSTM(100, return_sequences=False, dropout=0.2, name='lstm')(concat)
-    fc_1 = Dense(100, name='fc_1')(lstm)
-    fc_2 = Dense(50, name='fc_2')(fc_1)
-    fc_str = Dense(1, name='fc_str')(fc_2)
-    fc_t = Dense(1, name='fc_t')(fc_2)
-    fc_b = Dense(1, name='fc_b')(fc_2)
-    
-    model = Model(inputs=[img_str, vel], outputs=[fc_str, fc_t, fc_b])
-
-    return model
-    
-def model_pilot_vel():
-    img_shape = (config['input_image_height'],
+    img_tb_shape = (config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'],)
     vel_shape = (1,)
-    ######img model#######
-    img_input = Input(shape=img_shape)
-    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    ######str model#######
+    img_str = Input(shape=img_str_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
     conv_1 = Conv2D(24, (5, 5), strides=(2,2))(lamb)
     conv_2 = Conv2D(36, (5, 5), strides=(2,2))(conv_1)
     conv_3 = Conv2D(48, (5, 5), strides=(2,2))(conv_2)
@@ -71,22 +41,136 @@ def model_pilot_vel():
     conv_5 = Conv2D(64, (3, 3), name='conv2d_last')(conv_4)
     flat = Flatten()(conv_5)
     fc_1 = Dense(100, name='fc_1')(flat)
-    fc_2 = Dense(50, name='fc_2')(fc_1)
+        
+    ######brk, thr model#######
+    img_tb = Input(shape=img_tb_shape)
+    lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+    conv_c_1 = Conv2D(24, (5, 5), strides=(2,2))(lamb_c)
+    conv_c_2 = Conv2D(36, (5, 5), strides=(2,2))(conv_c_1)
+    conv_c_3 = Conv2D(48, (5, 5), strides=(2,2))(conv_c_2)
+    conv_c_4 = Conv2D(64, (3, 3))(conv_c_3)
+    conv_c_5 = Conv2D(64, (3, 3), name='conv2d_c_last')(conv_c_4)
+    flat_c = Flatten()(conv_c_5)
+    fc_c_1 = Dense(100, name='fc_c_1')(flat_c)
     
-    ######vel model#######
-    vel_input = Input(shape=vel_shape)
+    ########concat##########
+    concat  = Concatenate()([fc_1, fc_c_1])
     
-    ######concat##########
-    concat_img_vel = concatenate([fc_2, vel_input])
-    fc_3 = Dense(10, name='fc_3')(concat_img_vel)
+    #######str model#########
+    fc_2 = Dense(50, name='fc_2')(concat)
+    fc_3 = Dense(10, name='fc_3')(fc_2)
     fc_str = Dense(1, name='fc_str')(fc_3)
-    fc_t = Dense(1, name='fc_t')(fc_3)
-    fc_b = Dense(1, name='fc_b')(fc_3)
     
-    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_t, fc_b])
+    ######brk, thr model#######
+    vel = Input(shape=vel_shape)
+    fc_c_2 = Dense(50, name='fc_c_2')(concat)
+    concat_vel = Concatenate()([fc_c_2, vel])
+    fc_c_3 = Dense(20, name='fc_c_3')(concat_vel)
+    fc_t = Dense(1, name='fc_t')(fc_c_3)
+    fc_b = Dense(1, name='fc_b')(fc_c_3)
+    
+    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
 
     return model
 
+
+def model_epilot_lstm():
+    from keras.layers.recurrent import LSTM
+    from keras.layers.wrappers import TimeDistributed
+    img_str_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    img_tb_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    vel_shape = (None, 1,)
+    ######str model#######
+    img_str = Input(shape=img_str_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_1)
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
+    flat = TimeDistributed(Flatten())(conv_5)
+    lstm = LSTM(100, return_sequences=False, dropout=0.2, name='lstm')(flat)
+    fc_1 = Dense(50, name='fc_1')(lstm)
+    fc_2 = Dense(10, name='fc_2')(fc_1)
+    fc_str = Dense(1, name='fc_str')(fc_2)
+    ######brk, thr model#######
+    img_tb = Input(shape=img_tb_shape)
+    lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+    conv_c_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb_c)
+    conv_c_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_c_1)
+    conv_c_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_c_2)
+    conv_c_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_c_3)
+    conv_c_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_c_last')(conv_c_4)
+    flat_c = TimeDistributed(Flatten())(conv_c_5)
+    
+    vel = Input(shape=vel_shape)
+    concat_c  = Concatenate()([flat_c, vel])
+    lstm_c = LSTM(100, return_sequences=False, dropout=0.2, name='lstm_c')(concat_c)
+    fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
+    
+    ########concat##########
+    concat  = Concatenate()([fc_2, fc_c_1])
+    ######brk, thr model#######
+    fc_c_2 = Dense(20, name='fc_c_2')(concat)
+    fc_t = Dense(1, name='fc_t')(fc_c_2)
+    fc_b = Dense(1, name='fc_b')(fc_c_2)
+    
+    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
+
+    return model
+
+def model_epilot_lstm_delta():
+    from keras.layers.recurrent import LSTM
+    from keras.layers.wrappers import TimeDistributed
+    img_str_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    img_tb_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    vel_shape = (None, 1,)
+    ######str model#######
+    img_str = Input(shape=img_str_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_1)
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
+    flat = TimeDistributed(Flatten())(conv_5)
+    lstm = LSTM(100, return_sequences=False, dropout=0.2, name='lstm')(flat)
+    fc_1 = Dense(50, name='fc_1')(lstm)
+    fc_2 = Dense(10, name='fc_2')(fc_1)
+    fc_str = Dense(1, name='fc_str')(fc_2)
+    ######brk, thr model#######
+    img_tb = Input(shape=img_tb_shape)
+    lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+    conv_c_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb_c)
+    conv_c_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_c_1)
+    conv_c_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_c_2)
+    conv_c_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_c_3)
+    conv_c_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_c_last')(conv_c_4)
+    flat_c = TimeDistributed(Flatten())(conv_c_5)
+    
+    vel = Input(shape=vel_shape)
+    concat_c  = Concatenate()([flat_c, vel])
+    lstm_c = LSTM(100, return_sequences=False, dropout=0.2, name='lstm_c')(concat_c)
+    fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
+    
+    ########concat##########
+    concat  = Concatenate()([fc_2, fc_c_1])
+    ######brk, thr model#######
+    fc_c_2 = Dense(20, name='fc_c_2')(concat)
+    fc_t = Dense(1, name='fc_t')(fc_c_2)
+    fc_b = Dense(1, name='fc_b')(fc_c_2)
+    
+    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
+
+    return model
 
 class NetModel:
     def __init__(self, model_path, delta_model_path):
@@ -111,8 +195,10 @@ class NetModel:
     #
     def _model(self):
         # self.model = model_pilot_vel()
-        self.model = model_pilot_delta()
-        self.delta_model = model_pilot_delta()
+        self.model = model_epilot_lstm()
+        
+        if config['delta_run'] is True:
+            self.delta_model = model_epilot_delta()
 
         self.summary()
         self._compile()
@@ -138,9 +224,11 @@ class NetModel:
         self.model.compile(loss=losses.mean_squared_error,
                     optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
                     metrics=['accuracy'])
-        self.delta_model.compile(loss=losses.mean_squared_error,
-                    optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
-                    metrics=['accuracy'])
+        
+        if config['delta_run'] is True:
+            self.delta_model.compile(loss=losses.mean_squared_error,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
         # if config['steering_angle_tolerance'] == 0.0:
         #     self.model.compile(loss=losses.mean_squared_error,
         #               optimizer=optimizers.Adam(),
@@ -182,8 +270,9 @@ class NetModel:
 
         self.model = model_from_json(open(self.model_path+'.json').read())
         self.model.load_weights(self.model_path+'.h5')
-        self.delta_model = model_from_json(open(self.delta_model_path+'.json').read())
-        self.delta_model.load_weights(self.delta_model_path+'.h5')
+        if config['delta_run'] is True:
+            self.delta_model = model_from_json(open(self.delta_model_path+'.json').read())
+            self.delta_model.load_weights(self.delta_model_path+'.h5')
         self._compile()
 
     ###########################################################################
@@ -191,5 +280,6 @@ class NetModel:
     # show summary
     def summary(self):
         self.model.summary()
-        self.delta_model.summary()
+        if config['delta_run'] is True:
+            self.delta_model.summary()
 

@@ -67,7 +67,8 @@ class DriveTrain:
             self.v_data = DriveData(data_path+'/valid/'+ model_name+'/'+ model_name + const.DATA_EXT)
             self.t_data_path = data_path+'/train/'+ model_name
             self.v_data_path = data_path+'/valid/'+ model_name
-        self.net_model = NetModel(data_path)
+        
+        self.net_model = NetModel(data_path, None)
         self.image_process = ImageProcess()
         self.data_aug = DataAugmentation()
         
@@ -234,111 +235,216 @@ class DriveTrain:
 
             return images, velocities, measurements, deltas
 
-        def _prepare_lstm_batch_samples(batch_samples, data=None):
+        def _prepare_lstm_batch_samples(batch_samples, data=None, model=None):
             #images_str, images_tb, str, thr, brk
             images = []
             velocities = []
             measurements = []
-            delta_strs = []
-            delta_thrs = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
                 data_path = self.t_data_path
             elif data == 'valid':
                 data_path = self.v_data_path
-            for i in range(0, config['batch_size']):
-                images_timestep = []
-                image_names_timestep = []
-                velocities_timestep = []
-                measurements_timestep = []
-                delta_strs_timestep = []
-                delta_thrs_timestep = []
-                for j in range(0, config['lstm_timestep']):
-                    image_name = batch_samples[i][0][j]
-                    image_path = data_path + '/' + image_name
-                    image = cv2.imread(image_path)
-                    # if collected data is not cropped then crop here
-                    # otherwise do not crop.
-                    if Config.data_collection['crop'] is not True:
-                        image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
-                                    Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
-                    image = cv2.resize(image, 
-                                    (config['input_image_width'],
-                                    config['input_image_height']))
-                    image = self.image_process.process(image)
-                    
-                    images_timestep.append(image)
-                    image_names_timestep.append(image_name)
-                    velocity = batch_samples[i][1][j]
-                    velocities_timestep.append(velocity)
-                    
-                    if j is config['lstm_timestep']-1:
-                        measurement = batch_samples[i][2][j]
-                        delta = batch_samples[i][3][j]
-                        # if no brake data in collected data, brake values are dummy
-                        steering_angle, throttle, brake = measurement
-                        delta_str, delta_thr = delta
-                        if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
-                            steering_angle = 0
+            if model == 'base':
+                images_str  = []
+                images_tb   = []
+                str         = []
+                thr         = []
+                brk         = []
+                for i in range(0, config['batch_size']):
+                    images_timestep = []
+                    image_names_timestep = []
+                    velocities_timestep = []
+                    measurements_timestep = []
+                    images_str_timestep  = []
+                    images_tb_timestep   = []
+                    str_timestep         = []
+                    thr_timestep         = []
+                    brk_timestep         = []
+                    for j in range(0, config['lstm_timestep']):
+                        image_name = batch_samples[i][0][j]
+                        image_path = data_path + '/' + image_name
+                        image = cv2.imread(image_path)
+                        # if collected data is not cropped then crop here
+                        # otherwise do not crop.
+                        if Config.data_collection['crop'] is not True:
+                            image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                        Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                        image = cv2.resize(image, 
+                                        (config['input_image_width'],
+                                        config['input_image_height']))
+                        crop_tb = image[0:30, 0:159]
+                        crop_str = image[31:159, 0:159]
+                        crop_tb = cv2.resize(crop_tb, 
+                                            (config['input_image_width'],
+                                            config['input_image_height']))
+                        crop_str = cv2.resize(crop_str, 
+                                            (config['input_image_width'],
+                                            config['input_image_height']))
+                        crop_tb = self.image_process.process(crop_tb)
+                        crop_str = self.image_process.process(crop_str)
+                        image = self.image_process.process(image)
+                        
+                        images_timestep.append(image)
+                        image_names_timestep.append(image_name)
+                        velocity = batch_samples[i][1][j]
+                        velocities_timestep.append(velocity)
+                        
+                        images_str_timestep.append(crop_str)
+                        images_tb_timestep.append(crop_tb)
+                        
+                        if j is config['lstm_timestep']-1:
+                            measurement = batch_samples[i][2][j]
+                            # if no brake data in collected data, brake values are dummy
+                            steering_angle, throttle, brake = measurement
                             
-                        # if config['num_outputs'] == 2:                
-                        #     measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
-                        # elif config['num_outputs'] == 3:                
-                        #     measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle, brake))
-                        # else:
-                        #     measurements_timestep.append(steering_angle*config['steering_angle_scale'])
-                            
-                        if config['network_type'] == 8:
+                            if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
+                                steering_angle = 0
+                                
+                            if config['num_outputs'] == 2:                
+                                measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
+                            elif config['num_outputs'] == 3:
+                                measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle, brake))
+                                str_timestep.append(steering_angle*config['steering_angle_scale'])
+                                thr_timestep.append(throttle)
+                                brk_timestep.append(brake)
+                            else:
+                                measurements_timestep.append(steering_angle*config['steering_angle_scale'])
+                    
+                    # if data == 'valid':
+                    #     print(image_names_timestep)
+                    images.append(images_timestep)
+                    velocities.append(velocities_timestep)
+                    measurements.append(measurements_timestep)
+                    images_str.append(images_str_timestep)
+                    images_tb.append(images_tb_timestep)
+                    str.append(str_timestep)
+                    thr.append(thr_timestep)
+                    brk.append(brk_timestep)
+                    
+                return images, velocities, measurements, images_str, images_tb, str, thr, brk
+            
+            elif model == 'delta':
+                images_str  = []
+                images_tb   = []
+                delta_strs = []
+                delta_thrs = []
+                delta_brks = []
+                for i in range(0, config['batch_size']):
+                    images_timestep = []
+                    image_names_timestep = []
+                    velocities_timestep = []
+                    measurements_timestep = []
+                    images_str_timestep  = []
+                    images_tb_timestep   = []
+                    delta_strs_timestep = []
+                    delta_thrs_timestep = []
+                    delta_brks_timestep = []
+                    for j in range(0, config['lstm_timestep']):
+                        image_name = batch_samples[i][0][j]
+                        image_path = data_path + '/' + image_name
+                        image = cv2.imread(image_path)
+                        # if collected data is not cropped then crop here
+                        # otherwise do not crop.
+                        if Config.data_collection['crop'] is not True:
+                            image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                        Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                        image = cv2.resize(image, 
+                                        (config['input_image_width'],
+                                        config['input_image_height']))
+                        crop_tb = image[0:30, 0:159]
+                        crop_str = image[31:159, 0:159]
+                        crop_tb = cv2.resize(crop_tb, 
+                                            (config['input_image_width'],
+                                            config['input_image_height']))
+                        crop_str = cv2.resize(crop_str, 
+                                            (config['input_image_width'],
+                                            config['input_image_height']))
+                        crop_tb = self.image_process.process(crop_tb)
+                        crop_str = self.image_process.process(crop_str)
+                        
+                        image = self.image_process.process(image)
+                        
+                        images_timestep.append(image)
+                        image_names_timestep.append(image_name)
+                        velocity = batch_samples[i][1][j]
+                        velocities_timestep.append(velocity)
+                        
+                        images_str_timestep.append(crop_str)
+                        images_tb_timestep.append(crop_tb)
+                        
+                        if j is config['lstm_timestep']-1:
+                            measurement = batch_samples[i][2][j]
+                            delta = batch_samples[i][3][j]
+                            # if no brake data in collected data, brake values are dummy
+                            steering_angle, throttle, brake = measurement
+                            delta_str, delta_thr, delta_brk = delta
+                            if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
+                                steering_angle = 0
+                                
                             measurements_timestep.append(brake)
                             delta_strs_timestep.append(delta_str)
                             delta_thrs_timestep.append(delta_thr)
-                
-                # if data == 'valid':
-                #     print(image_names_timestep)
-                images.append(images_timestep)
-                velocities.append(velocities_timestep)
-                measurements.append(measurements_timestep)
-                delta_strs.append(delta_strs_timestep)
-                delta_thrs.append(delta_thrs_timestep)
-                
-                
-            return images, velocities, measurements, delta_strs, delta_thrs
+                            delta_brks_timestep.append(delta_brk)
+                    
+                    # if data == 'valid':
+                    #     print(image_names_timestep)
+                    images.append(images_timestep)
+                    velocities.append(velocities_timestep)
+                    measurements.append(measurements_timestep)
+                    images_str.append(images_str_timestep)
+                    images_tb.append(images_tb_timestep)
+                    delta_strs.append(delta_strs_timestep)
+                    delta_thrs.append(delta_thrs_timestep)
+                    delta_brks.append(delta_brks_timestep)
+                    
+                return images, velocities, measurements, images_str, images_tb, delta_strs, delta_thrs, delta_brks
         
-        def _generator(samples, batch_size=config['batch_size'], data=None):
+        def _generator(samples, batch_size=config['batch_size'], data=None, model=None):
             num_samples = len(samples)
             while True: # Loop forever so the generator never terminates
                 if config['lstm'] is True:
+                    # print('LSTM')
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
-                        batch_samples = samples[offset:offset+batch_size]
+                        if model == 'delta':
+                            # print('delta')
+                            batch_samples = samples[offset:offset+batch_size]
 
-                        images, velocities, measurements, dstr, dthr = _prepare_lstm_batch_samples(batch_samples, data)
-                        if config['network_type'] == 8:
-                            X_train_img = np.array(images)
-                            dstr = np.array(dstr)
-                            dthr = np.array(dthr)
+                            images, velocities, measurements, images_str, images_tb, dstr, dthr, dbrk = _prepare_lstm_batch_samples(batch_samples, data, model)
+                            X_train_str = np.array(images_str)
+                            X_train_tb = np.array(images_tb)
                             X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
-                            X_train = [X_train_img, X_train_vel]
+                            X_train = [X_train_str, X_train_tb, X_train_vel]
                             y_train_dstr = np.array(dstr).reshape(-1,1)
                             y_train_dthr = np.array(dthr).reshape(-1,1)
-                            y_train_b = np.array(measurements)
+                            y_train_b = np.array(dbrk).reshape(-1,1)
                             y_train = [y_train_dstr, y_train_dthr, y_train_b]
                             
-                        
-                        yield X_train, y_train
-                        
+                            yield X_train, y_train
+                            
+                        elif model == 'base':
+                            # print('base')
+                            batch_samples = samples[offset:offset+batch_size]
+                            images, velocities, measurements, images_str, images_tb, str, thr, brk = _prepare_lstm_batch_samples(batch_samples, data, model)
+                            
+                            X_train_str = np.array(images_str)
+                            X_train_tb = np.array(images_tb)
+                            X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
+                            X_train = [X_train_str, X_train_tb, X_train_vel]
+                            y_train_str = np.array(str).reshape(-1,1)
+                            y_train_t = np.array(thr).reshape(-1,1)
+                            y_train_b = np.array(brk).reshape(-1,1)
+                            y_train = [y_train_str, y_train_t, y_train_b]
+                                
+                            yield X_train, y_train
+
                         
                 else: 
                     samples = sklearn.utils.shuffle(samples)
-
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
-                        
                         images, velocities, measurements, images_str, images_tb, str, thr, brk = _prepare_batch_samples(batch_samples, data)
-                        # X_train = np.array(images)
-                        # y_train = np.array(measurements)
-                        # print(y_train.shape)
-                        # y_train = y_train.reshape(-1, 1)
                         
                         if config['num_inputs'] == 2:
                             X_train = np.array(images)
@@ -348,15 +454,10 @@ class DriveTrain:
                             X_train_str = np.array(images_str)
                             X_train_tb = np.array(images_tb)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
-                            # print("str", X_train_str.shape)
-                            # print("tb", X_train_tb.shape)
-                            # print("vel", X_train_vel.shape)
                             X_train = [X_train_str, X_train_tb, X_train_vel]
-                            # print(np.array(X_train).shape)
                         if config['network_type'] == 6:
                             X_train_origin = np.array(images)
                             X_train = [X_train_origin, X_train_tb, X_train_vel]
-
                         if config['num_outputs'] == 3:
                             y_train_str = np.array(str).reshape(-1,1)
                             y_train_t = np.array(thr).reshape(-1,1)
@@ -366,11 +467,11 @@ class DriveTrain:
                         yield X_train, y_train
                         
         if config['data_split'] is True:
-            self.train_generator = _generator(self.train_data)
-            self.valid_generator = _generator(self.valid_data)       
+            self.train_generator = _generator(self.train_data, model=config['model'])
+            self.valid_generator = _generator(self.valid_data, model=config['model'])       
         else:
-            self.train_generator = _generator(self.train_data, data='train')
-            self.valid_generator = _generator(self.valid_data, data='valid')
+            self.train_generator = _generator(self.train_data, data='train', model=config['model'])
+            self.valid_generator = _generator(self.valid_data, data='valid', model=config['model'])
         
         if (show_summary):
             self.net_model.model.summary()
