@@ -21,11 +21,15 @@ throttle_sharp_turn: 0.1
 # velocity threshold for not moving
 velocity_0: 0.03
 
+#
+delta_steer: 0.01
+delta_throttle: 0.001
+
 # lstm
 lstm_dataterm : 1
 
 # scale factors
-scale_factor_throttle: 1
-scale_factor_steering: 1
+scale_factor_throttle: 1.0
+scale_factor_steering: 1.0
 
 ai_chauffeur: False

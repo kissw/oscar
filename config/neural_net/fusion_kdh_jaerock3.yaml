@@ -11,10 +11,11 @@ version: 0.92
 
 # network definition
 network_type: 8       # refer to neural_net/const.py
+delta_network_type: 8       # refer to neural_net/const.py
 gpus: 0
 
 weight_load: False
-lstm: True
+lstm: False
 lstm_timestep: 30
 lstm_dataterm: 1
 lstm_lr: 0.000001        # 

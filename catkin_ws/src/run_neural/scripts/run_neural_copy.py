@@ -4,7 +4,6 @@
 Created on Sat Sep 23 13:23:14 2017
 History:
 11/28/2020: modified for OSCAR 
-
 @author: jaerock
 """
 
@@ -40,22 +39,21 @@ else:
 config = Config.neural_net
 velocity = 0.0
 class NeuralControl:
-    def __init__(self, weight_file_name, network_type):
+    def __init__(self, model_path, delta_model_path):
         rospy.init_node('run_neural')
         self.ic = ImageConverter()
         self.image_process = ImageProcess()
         self.rate = rospy.Rate(30)
-        self.drive= DriveRun(weight_file_name, network_type)
+        self.drive= DriveRun(model_path, delta_model_path)
+        rospy.Subscriber(Config.data_collection['camera_image_topic'], Image, self._controller_cb)
         self.image = None
         self.image_crop = None
         self.image_processed = False
+        #self.config = Config()
+        self.braking = False
         self.lstm_image = []
         self.lstm_vel = []
-        self.braking = False
         self.term_count = 0
-        self.network_type = network_type
-        rospy.Subscriber(Config.data_collection['camera_image_topic'], Image, self._controller_cb)
-        
     def _controller_cb(self, image): 
         img = self.ic.imgmsg_to_opencv(image)
         cropped = img[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
@@ -63,58 +61,18 @@ class NeuralControl:
                       
         img = cv2.resize(cropped, (config['input_image_width'],
                                    config['input_image_height']))
-           
-        self.image = self.image_process.process(img)
-        self.image_processed = True
-        print('hi')
+                                          
+        origin_image = self.image_process.process(img)
+        self.image = origin_image
         
-    def _timer_cb(self):
-        self.braking = False
-
-    def apply_brake(self):
-        self.braking = True
-        timer = threading.Timer(Config.run_neural['brake_apply_sec'], self._timer_cb) 
-        timer.start()
-
-class DeltaNeuralControl:
-    def __init__(self, weight_file_name, network_type):
-        rospy.init_node('run_neural')
-        self.ic = ImageConverter()
-        self.image_process = ImageProcess()
-        self.rate = rospy.Rate(30)
-        self.drive= DriveRun(weight_file_name, network_type)
-        self.image = None
-        self.image_crop = None
-        self.image_processed = False
-        self.lstm_image = []
-        self.lstm_vel = []
-        self.braking = False
-        self.term_count = 0
-        self.network_type = network_type
-        rospy.Subscriber(Config.data_collection['camera_image_topic'], Image, self._controller_cb)
-        
-    def _controller_cb(self, image): 
-        img = self.ic.imgmsg_to_opencv(image)
-        cropped = img[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
-                      Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
-                      
-        img = cv2.resize(cropped, (config['input_image_width'],
-                                   config['input_image_height']))
-           
-        self.image = self.image_process.process(img)
-        # self.vel = velocity
-        ## this is for CNN-LSTM net models
-            
         if self.term_count % Config.run_neural['lstm_dataterm'] is 0:
             self.lstm_image.append(self.image)
+            self.lstm_vel.append(velocity)
             if len(self.lstm_image) > config['lstm_timestep'] :
                 del self.lstm_image[0]
-            if config['num_inputs'] is not 1:
-                self.lstm_vel.append(velocity)
-                if len(self.lstm_vel) > config['lstm_timestep']:
-                    del self.lstm_vel[0]
+                del self.lstm_vel[0]
         self.term_count += 1
-        
+                    
         self.image_processed = True
         
     def _timer_cb(self):
@@ -125,7 +83,7 @@ class DeltaNeuralControl:
         timer = threading.Timer(Config.run_neural['brake_apply_sec'], self._timer_cb) 
         timer.start()
 
-      
+
 def pos_vel_cb(value):
     global velocity
 
@@ -135,11 +93,10 @@ def pos_vel_cb(value):
     
     velocity = math.sqrt(vel_x**2 + vel_y**2 + vel_z**2)
         
-def main(weight_file_name, delta_model_name):
+def main(model_path, delta_model_path):
 
     # ready for neural network
-    neural_control = NeuralControl(weight_file_name, config['network_type'])
-    # neural_control_delta = DeltaNeuralControl(delta_model_name, config['delta_network_type'])
+    neural_control = NeuralControl(model_path, delta_model_path)
     
     rospy.Subscriber(Config.data_collection['base_pose_topic'], Odometry, pos_vel_cb)
     # ready for /bolt topic publisher
@@ -152,42 +109,44 @@ def main(weight_file_name, delta_model_name):
         joy_pub4mavros = rospy.Publisher(Config.config['mavros_cmd_vel_topic'], Twist, queue_size=20)
 
     print('\nStart running. Vroom. Vroom. Vroooooom......')
-    print('steer \tthrt: \tbrake \tvelocity \tHz')
+    # print('steer \tthrt: \tbrake \tvelocity \tHz')
+    print('steer \td_str \tthrt \t d_thr \tbrake \tvelocity \tHz')
 
     use_predicted_throttle = True if config['num_outputs'] == 2 else False
     while not rospy.is_shutdown():
 
-        # if neural_control_delta.image_processed is False:
-        #     continue
+        if neural_control.image_processed is False:
+            continue
         
         start = time.time()
         end = time.time()
         # predicted steering angle from an input image
+                
+        if len(neural_control.lstm_vel) >= config['lstm_timestep']:
+            prediction, delta_prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_vel))
+            
+            pred_data.steer     = prediction[0][0][0]
+            pred_data.throttle  = prediction[1][0][0]
+            pred_data.brake     = prediction[2][0][0]
+            delta_data.steer    = delta_prediction[0][0][0] * float(Config.run_neural['delta_steer'])
+            delta_data.throttle = delta_prediction[1][0][0] * float(Config.run_neural['delta_throttle'])
+            delta_data.brake    = delta_prediction[2][0][0]
+            
+            joy_data.steer = pred_data.steer + delta_data.steer
+            joy_data.throttle = pred_data.throttle + delta_data.throttle
+            joy_data.brake = delta_prediction[2][0][0]
         
-        if config['num_inputs'] == 2:
-            prediction = neural_control.drive.run((neural_control.image, velocity))
-            if config['lstm'] is True:
-                if len(neural_control_delta.lstm_image) >= config['lstm_timestep'] :
-                    start = time.time()
-                    # print('good')
-                        # if len(neural_control_delta.lstm_vel) >= config['lstm_timestep']:
-                            # print('good')
-                            # delta_prediction = neural_control_delta.drive.run((neural_control.lstm_image, neural_control.lstm_vel))
-                            # joy_data.steer = prediction[0][0][0] + delta_prediction[0][0][0] * float(Config.run_neural['delta'])
-                            # joy_data.throttle = prediction[0][0][1] + delta_prediction[0][0][1] * float(Config.run_neural['delta'])
-                            # joy_data.brake = delta_prediction[0][0][2]
-                            
-                            # pred_data.steer    = prediction[0][0][0]
-                            # pred_data.throttle = prediction[0][0][1]
-                            # pred_data.brake    = prediction[0][0][2]
-                            
-                            # delta_data.steer = delta_prediction[0][0][0]
-                            # delta_data.throttle = delta_prediction[0][0][1]
-                            # delta_data.brake = delta_prediction[0][0][2]
-                            
-                    end = time.time() - start
-                    end = float(1/end)
-
+        if joy_data.throttle < 0 :
+            joy_data.throttle = 0
+        elif joy_data.throttle > 1 :
+            joy_data.throttle = 1
+        
+        if joy_data.brake < 0 :
+            joy_data.brake = 0
+        elif joy_data.brake > 1 :
+            joy_data.brake = 1
+            
+            
         #############################
         ## very very simple controller
         ## 
@@ -229,11 +188,11 @@ def main(weight_file_name, delta_model_name):
 
         ## print out
         # print(joy_data.steer, joy_data.throttle, joy_data.brake, velocity)
-        # print('\nStart running. Vroom. Vroom. Vroooooom......')
-        # print('steer \td_str \tthrt \t d_str \tbrake \tvelocity \tHz')
+        # cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(joy_data.steer, 
+        #                 joy_data.throttle, joy_data.brake, velocity, end)
+
         cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4:.3f} \t{5:.3f} \t{6}\r'.format(pred_data.steer, delta_data.steer,
                                         pred_data.throttle, delta_data.throttle, joy_data.brake, velocity, end)
-
         sys.stdout.write(cur_output)
         sys.stdout.flush()
             
@@ -253,4 +212,3 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         print ('\nShutdown requested. Exiting...')
-        

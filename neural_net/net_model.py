@@ -89,14 +89,14 @@ def model_pilot_vel():
 
 
 class NetModel:
-    def __init__(self, model_path):
+    def __init__(self, model_path, delta_model_path):
         self.model = None
+        self.delta_model = None
         model_name = model_path[model_path.rfind('/'):] # get folder name
         self.name = model_name.strip('/')
-
         self.model_path = model_path
+        self.delta_model_path = delta_model_path
         #self.config = Config()
-
         # to address the error:
         #   Could not create cudnn handle: CUDNN_STATUS_INTERNAL_ERROR
         os.environ["CUDA_VISIBLE_DEVICES"]=str(config['gpus'])
@@ -110,12 +110,9 @@ class NetModel:
     ###########################################################################
     #
     def _model(self):
-        if config['network_type'] == const.NET_TYPE_PILOT_VEL:
-            self.model = model_pilot_vel()
-        elif config['network_type'] == const.NET_TYPE_PILOT_DELTA:
-            self.model = model_pilot_delta()
-        else:
-            exit('ERROR: Invalid neural network type.')
+        # self.model = model_pilot_vel()
+        self.model = model_pilot_delta()
+        self.delta_model = model_pilot_delta()
 
         self.summary()
         self._compile()
@@ -139,6 +136,9 @@ class NetModel:
             learning_rate = config['cnn_lr']
         decay = config['decay']
         self.model.compile(loss=losses.mean_squared_error,
+                    optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                    metrics=['accuracy'])
+        self.delta_model.compile(loss=losses.mean_squared_error,
                     optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
                     metrics=['accuracy'])
         # if config['steering_angle_tolerance'] == 0.0:
@@ -182,6 +182,8 @@ class NetModel:
 
         self.model = model_from_json(open(self.model_path+'.json').read())
         self.model.load_weights(self.model_path+'.h5')
+        self.delta_model = model_from_json(open(self.delta_model_path+'.json').read())
+        self.delta_model.load_weights(self.delta_model_path+'.h5')
         self._compile()
 
     ###########################################################################
@@ -189,4 +191,5 @@ class NetModel:
     # show summary
     def summary(self):
         self.model.summary()
+        self.delta_model.summary()
 
