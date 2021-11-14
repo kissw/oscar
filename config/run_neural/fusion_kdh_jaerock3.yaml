@@ -22,8 +22,9 @@ throttle_sharp_turn: 0.1
 velocity_0: 0.03
 
 #
-delta_steer: 0.01
-delta_throttle: 0.001
+delta_steer: 1
+delta_throttle: 1
+delta_brake: 1
 
 # lstm
 lstm_dataterm : 1

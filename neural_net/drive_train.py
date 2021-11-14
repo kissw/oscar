@@ -120,21 +120,32 @@ class DriveTrain:
         deltas = []
         for i in range(0, last_index):
             timestep_samples = samples[ i : i+config['lstm_timestep']*config['lstm_dataterm'] :config['lstm_dataterm']]
-            
+            is_same_dataset = 0
             timestep_image_names = []
             timestep_measurements = []
             timestep_velocities = []
             timestep_deltas = []
+            timestep_image_times = []
             for image_name, velocity, measurment, delta in timestep_samples:
                 timestep_image_names.append(image_name)
                 timestep_measurements.append(measurment)
                 timestep_velocities.append(velocity)
                 timestep_deltas.append(delta)
-
-            image_names.append(timestep_image_names)
-            measurements.append(timestep_measurements)
-            velocities.append(timestep_velocities)
-            deltas.append(timestep_deltas)
+                hour = int(str(image_name.split('.')[0].split('-')[-4:-3][0]))
+                miniute = int(str(image_name.split('.')[0].split('-')[-3:-2][0]))
+                second = int(str(image_name.split('.')[0].split('-')[-2:-1][0]))
+                timestep_image_times.append(hour*3600 + miniute*60 + second)
+            prev_time = timestep_image_times[0]
+            for i in range(1, len(timestep_image_times)):
+                if abs(timestep_image_times[i] - prev_time) >= config['data_timegap']:
+                    is_same_dataset += 1
+            if is_same_dataset is 0:
+                image_names.append(timestep_image_names)
+                measurements.append(timestep_measurements)
+                velocities.append(timestep_velocities)
+                deltas.append(timestep_deltas)
+            # else:
+            #     print(timestep_image_names)
             
         if config['data_split'] is True:
             samples = list(zip(image_names, velocities, measurements))
@@ -419,7 +430,10 @@ class DriveTrain:
                             y_train_dstr = np.array(dstr).reshape(-1,1)
                             y_train_dthr = np.array(dthr).reshape(-1,1)
                             y_train_b = np.array(dbrk).reshape(-1,1)
-                            y_train = [y_train_dstr, y_train_dthr, y_train_b]
+                            if config['num_outputs'] == 1:
+                                y_train = y_train_dthr
+                            elif config['num_outputs'] == 3:
+                                y_train = [y_train_dstr, y_train_dthr, y_train_b]
                             
                             yield X_train, y_train
                             

@@ -123,6 +123,56 @@ def model_epilot_lstm():
 
     return model
 
+# def model_epilot_lstm_delta():
+#     from keras.layers.recurrent import LSTM
+#     from keras.layers.wrappers import TimeDistributed
+#     img_str_shape = (None, config['input_image_height'],
+#                     config['input_image_width'],
+#                     config['input_image_depth'],)
+#     img_tb_shape = (None, config['input_image_height'],
+#                     config['input_image_width'],
+#                     config['input_image_depth'],)
+#     vel_shape = (None, 1,)
+#     ######str model#######
+#     img_str = Input(shape=img_str_shape)
+#     lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
+#     conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb)
+#     conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_1)
+#     conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_2)
+#     conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
+#     conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
+#     flat = TimeDistributed(Flatten())(conv_5)
+#     lstm = LSTM(100, return_sequences=False, dropout=0.2, name='lstm')(flat)
+#     fc_1 = Dense(50, name='fc_1')(lstm)
+#     fc_2 = Dense(10, name='fc_2')(fc_1)
+#     fc_str = Dense(1, name='fc_str')(fc_2)
+#     ######brk, thr model#######
+#     img_tb = Input(shape=img_tb_shape)
+#     lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+#     conv_c_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb_c)
+#     conv_c_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_c_1)
+#     conv_c_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_c_2)
+#     conv_c_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_c_3)
+#     conv_c_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_c_last')(conv_c_4)
+#     flat_c = TimeDistributed(Flatten())(conv_c_5)
+    
+#     vel = Input(shape=vel_shape)
+#     concat_c  = Concatenate()([flat_c, vel])
+#     lstm_c = LSTM(100, return_sequences=False, dropout=0.2, name='lstm_c')(concat_c)
+#     fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
+    
+#     ########concat##########
+#     concat  = Concatenate()([fc_2, fc_c_1])
+#     ######brk, thr model#######
+#     fc_c_2 = Dense(20, name='fc_c_2')(concat)
+#     fc_t = Dense(1, name='fc_t')(fc_c_2)
+#     fc_b = Dense(1, name='fc_b')(fc_c_2)
+    
+#     model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
+
+#     return model
+
+
 def model_epilot_lstm_delta():
     from keras.layers.recurrent import LSTM
     from keras.layers.wrappers import TimeDistributed
@@ -142,10 +192,9 @@ def model_epilot_lstm_delta():
     conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
     conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
     flat = TimeDistributed(Flatten())(conv_5)
-    lstm = LSTM(100, return_sequences=False, dropout=0.2, name='lstm')(flat)
+    lstm = LSTM(100, return_sequences=False, name='lstm')(flat)
     fc_1 = Dense(50, name='fc_1')(lstm)
     fc_2 = Dense(10, name='fc_2')(fc_1)
-    fc_str = Dense(1, name='fc_str')(fc_2)
     ######brk, thr model#######
     img_tb = Input(shape=img_tb_shape)
     lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
@@ -158,7 +207,7 @@ def model_epilot_lstm_delta():
     
     vel = Input(shape=vel_shape)
     concat_c  = Concatenate()([flat_c, vel])
-    lstm_c = LSTM(100, return_sequences=False, dropout=0.2, name='lstm_c')(concat_c)
+    lstm_c = LSTM(100, return_sequences=False, name='lstm_c')(concat_c)
     fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
     
     ########concat##########
@@ -166,9 +215,8 @@ def model_epilot_lstm_delta():
     ######brk, thr model#######
     fc_c_2 = Dense(20, name='fc_c_2')(concat)
     fc_t = Dense(1, name='fc_t')(fc_c_2)
-    fc_b = Dense(1, name='fc_b')(fc_c_2)
     
-    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t, fc_b])
+    model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_t])
 
     return model
 
@@ -195,10 +243,12 @@ class NetModel:
     #
     def _model(self):
         # self.model = model_pilot_vel()
-        self.model = model_epilot_lstm()
-        
+        if config['model'] == 'base':
+            self.model = model_epilot_lstm()
+        elif config['model'] == 'delta':
+            self.model = model_epilot_lstm_delta()
         if config['delta_run'] is True:
-            self.delta_model = model_epilot_delta()
+            self.delta_model = model_epilot_lstm()
 
         self.summary()
         self._compile()

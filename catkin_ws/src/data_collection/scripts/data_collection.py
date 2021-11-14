@@ -56,9 +56,10 @@ class DataCollection():
 
         # create csv data file
         name_datatime = str(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-        path = '../data/' + sys.argv[1] + '/' + name_datatime + '/'
-        path = rospy.get_param('path_to_e2e_data', 
-                        './e2e_data') + '/' + sys.argv[1] + '/' + name_datatime + '/'
+        # path = '../data/' + sys.argv[1] + '/' + name_datatime + '/'
+        # path = rospy.get_param('path_to_e2e_data', 
+        #                 './e2e_fusion_data') + '/' + sys.argv[1] + '/' + name_datatime + '/'
+        path = sys.argv[1] + '/' + name_datatime + '/'
         # if sys.argv[1][-1] is '/':
         #     argv = sys.argv[1]
         # else:

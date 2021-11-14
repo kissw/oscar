@@ -12,6 +12,9 @@ if [ -z "$1" ]; then
 elif [ "$1" == "track_test" ]; then
     echo "Starting with $1..."  # modified DataSpeed track
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.2 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_straight" ]; then
+    echo "Starting with $1..."  # modified DataSpeed track
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.2 R:=0 P:=0 Y:=0
 elif [ "$1" == "track_jaerock3" ]; then
     echo "Starting with $1..."  # modified DataSpeed track
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.2 R:=0 P:=0 Y:=0
