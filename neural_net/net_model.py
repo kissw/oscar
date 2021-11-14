@@ -108,7 +108,8 @@ def model_epilot_lstm():
     flat_c = TimeDistributed(Flatten())(conv_c_5)
     
     vel = Input(shape=vel_shape)
-    concat_c  = Concatenate()([flat_c, vel])
+    lamb_v = Lambda(lambda x: x/40)(vel)
+    concat_c  = Concatenate()([flat_c, lamb_v])
     lstm_c = LSTM(100, return_sequences=False, dropout=0.2, name='lstm_c')(concat_c)
     fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
     
