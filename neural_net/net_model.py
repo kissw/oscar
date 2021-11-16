@@ -11,7 +11,7 @@ History:
 """
 
 from keras.models import Sequential, Model
-from keras.layers import Lambda, Dropout, Flatten, Dense, Activation, concatenate, Concatenate
+from keras.layers import Lambda, Dropout, Flatten, Dense, Activation, concatenate, Concatenate, Add
 from keras.layers import Conv2D, Convolution2D, MaxPooling2D, BatchNormalization, Input
 from keras import losses, optimizers
 import keras.backend as K
@@ -271,6 +271,89 @@ def model_epilot_2():
     model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_str, fc_t])
 
     return model
+
+
+def model_epilot_freeze():
+    
+    base_img_str_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    base_img_tb_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    base_vel_shape = (1,)
+    
+    delta_img_str_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    delta_img_tb_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    delta_vel_shape = (None, 1,)
+    
+    base_weightsfile = '/mnt/Data/oscar/dst/zero2/all/2021-11-11-00-00-00_fusion_kdh_jaerock3_N8.h5'
+    base_modelfile   = '/mnt/Data/oscar/dst/zero2/all/2021-11-11-00-00-00_fusion_kdh_jaerock3_N8.json'
+    
+    from keras.models import model_from_json
+    base_json_file = open(base_modelfile, 'r')
+    base_loaded_model_json = base_json_file.read()
+    base_json_file.close()
+    base_model = model_from_json(base_loaded_model_json)
+    base_model.load_weights(base_weightsfile)
+    base_model.trainable = False
+    
+    # base_model.summary()
+    base_img_str = Input(shape=base_img_str_shape)
+    base_img_tb = Input(shape=base_img_tb_shape)
+    base_vel = Input(shape=base_vel_shape)
+    base_model_output = base_model([base_img_str, base_img_tb, base_vel])
+    # print(base_model_output[1])
+    
+    
+    from keras.layers.recurrent import LSTM
+    from keras.layers.wrappers import TimeDistributed
+    ######str model#######
+    img_str = Input(shape=delta_img_str_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_str)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_1)
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
+    flat = TimeDistributed(Flatten())(conv_5)
+    lstm = LSTM(100, return_sequences=False, name='lstm')(flat)
+    fc_1 = Dense(50, name='fc_1')(lstm)
+    fc_2 = Dense(10, name='fc_2')(fc_1)
+    ######brk, thr model#######
+    img_tb = Input(shape=delta_img_tb_shape)
+    lamb_c = Lambda(lambda x: x/127.5 - 1.0)(img_tb)
+    conv_c_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)))(lamb_c)
+    conv_c_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)))(conv_c_1)
+    conv_c_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)))(conv_c_2)
+    conv_c_4 = TimeDistributed(Conv2D(64, (3, 3)))(conv_c_3)
+    conv_c_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_c_last')(conv_c_4)
+    flat_c = TimeDistributed(Flatten())(conv_c_5)
+    
+    vel = Input(shape=delta_vel_shape)
+    lamb_v = Lambda(lambda x: x/40)(vel)
+    fc_v_1 = Dense(50, name='fc_v_1')(lamb_v)
+    concat_c  = Concatenate()([flat_c, fc_v_1])
+    lstm_c = LSTM(100, return_sequences=False, name='lstm_c')(concat_c)
+    fc_c_1 = Dense(50, name='fc_c_1')(lstm_c)
+    
+    ########concat##########
+    concat  = Concatenate()([fc_2, fc_c_1])
+    ######brk, thr model#######
+    fc_c_2 = Dense(20, name='fc_c_2')(concat)
+    fc_t = Dense(1, name='fc_t')(fc_c_2)
+    fc_delta_thr = Add()([fc_t, base_model_output[1]])
+    # model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_t])
+    # model = Model(inputs=[img_str, img_tb, vel], outputs=[fc_t])
+    # model = Model(inputs=[base_img_str, base_img_tb, base_vel, img_str, img_tb, vel], outputs=[fc_t])
+    model = Model(inputs=[base_img_str, base_img_tb, base_vel, img_str, img_tb, vel], outputs=[base_model_output[0], fc_delta_thr])
+
+    return model
+
 class NetModel:
     def __init__(self, model_path, delta_model_path):
         self.model = None
@@ -298,6 +381,10 @@ class NetModel:
             self.model = model_epilot_2()
         elif config['model'] == 'delta':
             self.model = model_epilot_lstm_delta()
+        elif config['model'] == 'freeze':
+            # self.model = model_epilot_2()
+            self.model = model_epilot_freeze()
+            
         if config['delta_run'] is True:
             self.delta_model = model_epilot_lstm()
 
