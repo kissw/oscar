@@ -10,14 +10,14 @@ version: 0.92
 ## neural network 
 
 # network definition
-model: delta           # base, delta
+model: base           # base, delta
 delta_run: False
 network_type: 8       # refer to neural_net/const.py
 delta_network_type: 8       # refer to neural_net/const.py
 gpus: 0
 
 weight_load: False
-lstm: True
+lstm: False
 lstm_timestep: 30
 lstm_dataterm: 1
 data_timegap: 3
@@ -36,7 +36,7 @@ validation_rate: 0.3 #if data_split is True
 num_epochs: 500
 batch_size: 16
 num_inputs: 3     # input: image, velocity
-num_outputs: 1    # output: steering_angle, throttle
+num_outputs: 2    # output: steering_angle, throttle
 early_stopping_patience: 200
 # tensorboard log dir
 tensorboard_log_dir: logs/scalars/
