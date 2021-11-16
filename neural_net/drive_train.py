@@ -184,8 +184,12 @@ class DriveTrain:
 
         def _prepare_batch_samples(batch_samples, data=None):
             images = []
+            images_str  = []
+            images_tb   = []
             velocities = []
             measurements = []
+            str = []
+            thr = []
             deltas = []
             if data is None:
                 data_path = self.data_path
@@ -206,28 +210,38 @@ class DriveTrain:
                 image = cv2.resize(image, 
                                     (config['input_image_width'],
                                     config['input_image_height']))
-                # cv2.imwrite('/mnt/Data/oscar/ictc/test/bt/'+image_name, crop_tb)
-                # cv2.imwrite('/mnt/Data/oscar/ictc/test/str/'+image_name, crop_str)
+                crop_tb = image[0:30, 0:159]
+                crop_str = image[31:159, 0:159]
+                crop_tb = cv2.resize(crop_tb, 
+                                    (config['input_image_width'],
+                                    config['input_image_height']))
+                crop_str = cv2.resize(crop_str, 
+                                    (config['input_image_width'],
+                                    config['input_image_height']))
+                crop_tb = self.image_process.process(crop_tb)
+                crop_str = self.image_process.process(crop_str)
+                image = self.image_process.process(image)
                 
-                # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
-                # if data == 'train':
-                #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
                 images.append(image)
+                images_str.append(crop_str)
+                images_tb.append(crop_tb)
                 
                 velocities.append(velocity)
                 deltas.append(delta)
                 # if no brake data in collected data, brake values are dummy
                 steering_angle, throttle, brake = measurement
-                
                 if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
                     steering_angle = 0
 
                 if config['num_outputs'] == 2:                
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle))
-                if config['num_outputs'] == 3:                
+                    str.append(steering_angle)
+                    thr.append(throttle)
+                elif config['num_outputs'] == 3:                
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle, brake))
                 else:
                     measurements.append(steering_angle*config['steering_angle_scale'])
+                    str.append(steering_angle)
                     # print("1 : ", steering_angle)
                 
                 # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
@@ -239,12 +253,15 @@ class DriveTrain:
                     velocities.append(velocity)
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle))
+                        str.append(steering_angle)
+                        thr.append(throttle)
                     elif config['num_outputs'] == 3:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle, brake))
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
+                        str.append(steering_angle)
 
-            return images, velocities, measurements, deltas
+            return images, velocities, measurements, deltas, images_str, images_tb, str, thr
 
         def _prepare_lstm_batch_samples(batch_samples, data=None, model=None):
             #images_str, images_tb, str, thr, brk
@@ -458,7 +475,8 @@ class DriveTrain:
                     samples = sklearn.utils.shuffle(samples)
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
-                        images, velocities, measurements, images_str, images_tb, str, thr, brk = _prepare_batch_samples(batch_samples, data)
+                                                
+                        images, velocities, measurements, deltas, images_str, images_tb, str, thr = _prepare_batch_samples(batch_samples, data)
                         
                         if config['num_inputs'] == 2:
                             X_train = np.array(images)
@@ -469,14 +487,16 @@ class DriveTrain:
                             X_train_tb = np.array(images_tb)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_tb, X_train_vel]
-                        if config['network_type'] == 6:
-                            X_train_origin = np.array(images)
-                            X_train = [X_train_origin, X_train_tb, X_train_vel]
                         if config['num_outputs'] == 3:
-                            y_train_str = np.array(str).reshape(-1,1)
+                            y_train_str = np.array(measurements).reshape(-1,1)
                             y_train_t = np.array(thr).reshape(-1,1)
                             y_train_b = np.array(brk).reshape(-1,1)
                             y_train = [y_train_str, y_train_t, y_train_b]
+                        elif config['num_outputs'] == 2:
+                            y_train_str = np.array(str).reshape(-1,1)
+                            y_train_t = np.array(thr).reshape(-1,1)
+                            y_train = [y_train_str, y_train_t]
+                            
                             
                         yield X_train, y_train
                         
