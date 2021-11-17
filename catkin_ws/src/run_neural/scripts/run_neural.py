@@ -49,6 +49,7 @@ class NeuralControl:
         self.image = None
         self.image_crop = None
         self.image_processed = False
+        self.vel = None
         #self.config = Config()
         self.braking = False
         self.lstm_image = []
@@ -78,7 +79,9 @@ class NeuralControl:
         crop_str = self.image_process.process(crop_str)
         
         # self.image = origin_image
-        
+        self.image = crop_str
+        self.image_crop = crop_tb
+        self.vel = velocity
         if self.term_count % Config.run_neural['lstm_dataterm'] is 0:
             self.lstm_image.append(crop_str)
             self.lstm_image_tb.append(crop_tb)
@@ -109,14 +112,18 @@ def pos_vel_cb(value):
     
     velocity = math.sqrt(vel_x**2 + vel_y**2 + vel_z**2)
 
+def fusion_cb(value):
+    global steering
+    steering = value.steer
+
 def main(model_path):
-    
     # ready for neural network
     neural_control = NeuralControl(model_path, model_path)
     
     rospy.Subscriber(Config.data_collection['base_pose_topic'], Odometry, pos_vel_cb)
     # ready for /bolt topic publisher
     joy_pub = rospy.Publisher(Config.data_collection['vehicle_control_topic'], Control, queue_size = 10)
+    delta_pub = rospy.Publisher(Config.data_collection['vehicle_control_delta_topic'], Control, queue_size = 10)
     joy_data = Control()
     pred_data = Control()
 
@@ -136,49 +143,48 @@ def main(model_path):
         start = time.time()
         end = time.time()
         # predicted steering angle from an input image
+        
+        if config['lstm'] == True: 
+            if len(neural_control.lstm_vel) >= config['lstm_timestep']:
+                # prediction = neural_control.drive.run((neural_control.image, neural_control.image_crop, neural_control.vel))
+                prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_image_tb, neural_control.lstm_vel))
                 
-        if len(neural_control.lstm_vel) >= config['lstm_timestep']:
-            prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_image_tb, neural_control.lstm_vel))
+                pred_data.steer     = prediction[0][0][0]
+                pred_data.throttle  = prediction[1][0][0]
+                
+                if pred_data.throttle < 0 :
+                    pred_data.throttle = 0
+                elif pred_data.throttle > 1 :
+                    pred_data.throttle = 1
+                
+                joy_data.steer = (pred_data.steer) * Config.run_neural['scale_factor_steering']
+                joy_data.throttle = (pred_data.throttle) * Config.run_neural['scale_factor_throttle']
+        else:
+            prediction = neural_control.drive.run((neural_control.image, neural_control.image_crop, neural_control.vel))
+            # prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_image_tb, neural_control.lstm_vel))
             
             pred_data.steer     = prediction[0][0][0]
             pred_data.throttle  = prediction[1][0][0]
-            pred_data.brake     = prediction[2][0][0]
+            # print(pred_data)
             if pred_data.throttle < 0 :
                 pred_data.throttle = 0
             elif pred_data.throttle > 1 :
                 pred_data.throttle = 1
             
-            if pred_data.brake < 0 :
-                pred_data.brake = 0
-            elif pred_data.brake > 1 :
-                pred_data.brake = 1
-                
-            
             joy_data.steer = (pred_data.steer) * Config.run_neural['scale_factor_steering']
             joy_data.throttle = (pred_data.throttle) * Config.run_neural['scale_factor_throttle']
-            joy_data.brake = pred_data.brake
-        
         if joy_data.throttle < 0 :
             joy_data.throttle = 0
         elif joy_data.throttle > 1 :
             joy_data.throttle = 1
         
-        if joy_data.brake < 0 :
-            joy_data.brake = 0
-        elif joy_data.brake > 1 :
-            joy_data.brake = 1
-            
         joy_pub.publish(joy_data)
+        # delta_pub.publish(delta_data_raw)
 
-        ## print out
-        # print(joy_data.steer, joy_data.throttle, joy_data.brake, velocity)
-        # cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(joy_data.steer, 
-        #                 joy_data.throttle, joy_data.brake, velocity, end)
-
-        # cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(pred_data.steer,
-        #                                 pred_data.throttle, joy_data.brake, velocity, end)
-        # sys.stdout.write(cur_output)
-        # sys.stdout.flush()
+        cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(pred_data.steer,
+                                        pred_data.throttle, joy_data.brake, velocity, end)
+        sys.stdout.write(cur_output)
+        sys.stdout.flush()
             
         
         ## ready for processing a new input image
@@ -190,19 +196,22 @@ def main_delta(model_path, delta_model_path):
     # ready for neural network
     neural_control = NeuralControl(model_path, delta_model_path)
     
+    rospy.Subscriber('/fusion2', Control, fusion_cb)
     rospy.Subscriber(Config.data_collection['base_pose_topic'], Odometry, pos_vel_cb)
     # ready for /bolt topic publisher
     joy_pub = rospy.Publisher(Config.data_collection['vehicle_control_topic'], Control, queue_size = 10)
+    delta_pub = rospy.Publisher(Config.data_collection['vehicle_control_delta_topic'], Control, queue_size = 10)
     joy_data = Control()
     pred_data = Control()
     delta_data = Control()
+    delta_data_raw = Control()
 
     if Config.data_collection['vehicle_name'] == 'rover':
         joy_pub4mavros = rospy.Publisher(Config.config['mavros_cmd_vel_topic'], Twist, queue_size=20)
 
     print('\nStart running. Vroom. Vroom. Vroooooom......')
     # print('steer \tthrt: \tbrake \tvelocity \tHz')
-    print('steer \td_str \tthrt \t d_thr \tbrake \tvelocity \tHz')
+    print('steer \td_str \tthrt \td_thr \tbrake \tvelocity \tHz')
 
     use_predicted_throttle = True if config['num_outputs'] == 2 else False
     while not rospy.is_shutdown():
@@ -211,44 +220,37 @@ def main_delta(model_path, delta_model_path):
             continue
         
         start = time.time()
-        end = time.time()
         # predicted steering angle from an input image
                 
         if len(neural_control.lstm_vel) >= config['lstm_timestep'] and len(neural_control.lstm_image) >= config['lstm_timestep'] and len(neural_control.lstm_image_tb) >= config['lstm_timestep']:
-            prediction, delta_prediction = neural_control.drive.run_delta((neural_control.lstm_image, neural_control.lstm_image_tb, neural_control.lstm_vel))
-            # print(prediction)
+            prediction, delta_prediction = neural_control.drive.run_delta((neural_control.image, neural_control.image_crop, neural_control.vel,neural_control.lstm_image, neural_control.lstm_image_tb, neural_control.lstm_vel))
             if prediction is None and delta_prediction is None:
                 print("None")
             pred_data.steer     = prediction[0][0][0]
             pred_data.throttle  = prediction[1][0][0]
-            pred_data.brake     = prediction[2][0][0]
-            delta_data.steer    = delta_prediction[0][0][0] * float(Config.run_neural['delta_steer'])
-            delta_data.throttle = delta_prediction[1][0][0] * float(Config.run_neural['delta_throttle'])
-            delta_data.brake    = delta_prediction[2][0][0] * float(Config.run_neural['delta_brake'])
+            # print(pred_data.steer)
+            # print(delta_prediction)
+            # pred_data.brake     = prediction[2][0][0]
+            # delta_data_raw.steer    = delta_prediction[0][0]
+            delta_data_raw.throttle = delta_prediction[0][0]
+            # delta_data_raw.brake    = delta_prediction[2][0][0]
+            # delta_data.steer    = delta_data_raw.steer    * float(Config.run_neural['delta_steer'])
+            # delta_data.steer    = 0
+            delta_data.throttle = delta_data_raw.throttle * float(Config.run_neural['delta_throttle'])
+            # delta_data.brake    = delta_data_raw.brake    * float(Config.run_neural['delta_brake'])
+            # delta_data.brake    = 0
             
             if pred_data.throttle < 0 :
                 pred_data.throttle = 0
             elif pred_data.throttle > 1 :
                 pred_data.throttle = 1
-            
-            if pred_data.brake < 0 :
-                pred_data.brake = 0
-            elif pred_data.brake > 1 :
-                pred_data.brake = 1
-                
             if delta_data.throttle < 0 :
                 delta_data.throttle = 0
             elif delta_data.throttle > 1 :
                 delta_data.throttle = 1
-            
-            if delta_data.brake < 0 :
-                delta_data.brake = 0
-            elif delta_data.brake > 1 :
-                delta_data.brake = 1
-            
-            joy_data.steer = (pred_data.steer + delta_data.steer) * Config.run_neural['scale_factor_steering']
+                
+            joy_data.steer = steering
             joy_data.throttle = (pred_data.throttle + delta_data.throttle) * Config.run_neural['scale_factor_throttle']
-            joy_data.brake = pred_data.brake + delta_data.brake
         
         
         if joy_data.throttle < 0 :
@@ -261,54 +263,13 @@ def main_delta(model_path, delta_model_path):
         elif joy_data.brake > 1 :
             joy_data.brake = 1
             
-            
-        #############################
-        ## very very simple controller
-        ## 
-        # is_sharp_turn = False
-        # # if brake is not already applied and sharp turn
-        # if Config.run_neural['ai_chauffeur'] is True:
-        #     if neural_control.braking is False: 
-        #         if velocity < Config.run_neural['velocity_0']: # too slow then no braking
-        #             joy_data.throttle = Config.run_neural['throttle_default'] # apply default throttle
-        #             joy_data.brake = 0
-        #         elif abs(joy_data.steer) > Config.run_neural['sharp_turn_min']:
-        #             is_sharp_turn = True
-                
-        #         if is_sharp_turn or velocity > Config.run_neural['max_vel']: 
-        #             joy_data.throttle = Config.run_neural['throttle_sharp_turn']
-        #             joy_data.brake = Config.run_neural['brake_val']
-        #             neural_control.apply_brake()
-        #         else:
-        #             if use_predicted_throttle is False:
-        #                 joy_data.throttle = Config.run_neural['throttle_default']
-        #             joy_data.brake = 0
-                    
-
-            
-        #     ##############################    
-        #     ## publish mavros control topic
-            
-        #     if Config.data_collection['vehicle_name'] == 'rover':
-        #         joy_data4mavros = Twist()
-        #         if neural_control.braking is True:
-        #             joy_data4mavros.linear.x = 0
-        #             joy_data4mavros.linear.y = 0
-        #         else: 
-        #             joy_data4mavros.linear.x = joy_data.throttle*Config.run_neural['scale_factor_throttle']
-        #             joy_data4mavros.linear.y = joy_data.steer*Config.run_neural['scale_factor_steering']
-
-        #         joy_pub4mavros.publish(joy_data4mavros)
-
         joy_pub.publish(joy_data)
-
-        ## print out
-        # print(joy_data.steer, joy_data.throttle, joy_data.brake, velocity)
-        # cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(joy_data.steer, 
-        #                 joy_data.throttle, joy_data.brake, velocity, end)
-
-        cur_output = '{0:.3f} \t{1:.9f} \t{2:.3f} \t{3:.9f} \t{4:.3f} \t{5:.3f} \t{6}\r'.format(pred_data.steer, delta_data.steer,
-                                        pred_data.throttle, delta_data.throttle, joy_data.brake, velocity, end)
+        delta_pub.publish(delta_data_raw)
+        
+        cur_output = '{0:.3f} \t{1:.3f} \t{2:.9f} \t{3:.3f} \t{4:.3f} \t{5}\r'.format(pred_data.steer, delta_data.steer*100,
+                                        pred_data.throttle, delta_data.throttle*100, velocity, 1/abs(time.time()-start))
+        # cur_output = '{0:.3f} \t{1:.9f} \r'.format(pred_data.steer, delta_data.steer)
+        
         sys.stdout.write(cur_output)
         sys.stdout.flush()
             
@@ -321,12 +282,14 @@ def main_delta(model_path, delta_model_path):
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 3:
-            exit('Usage:\n$ rosrun run_neural run_neural.py standard_model_name, delta_model_name')
 
         if config['delta_run'] is True:
+            if len(sys.argv) != 3:
+                exit('Usage:\n$ rosrun run_neural run_neural.py standard_model_name, delta_model_name')
             main_delta(sys.argv[1], sys.argv[2])
         else:
+            if len(sys.argv) != 2:
+                exit('Usage:\n$ rosrun run_neural run_neural.py model_name')
             main(sys.argv[1])
             
     except KeyboardInterrupt:

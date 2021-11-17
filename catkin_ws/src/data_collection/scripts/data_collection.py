@@ -40,7 +40,6 @@ else:
 class DataCollection():
     def __init__(self):
         self.steering = self.throttle = self.brake = 0
-        self.last_steering = self.last_throttle = self.last_brake = 0
         self.delta_str = self.delta_thr = self.delta_brk = 0
         self.last_unix_time = 0
         self.vel_x = self.vel_y = self.vel_z = 0
@@ -85,9 +84,11 @@ class DataCollection():
         self.throttle = value.throttle
         self.steering = value.steer
         self.brake = value.brake
-        self.delta_str = self.steering - self.last_steering
-        self.delta_thr = self.throttle - self.last_throttle
-        self.delta_brk = self.brake    - self.last_brake
+    
+    def delta_cb(self, value):
+        self.delta_str = value.steer
+        self.delta_thr = value.throttle
+        self.delta_brk = value.brake
 
     def pos_vel_cb(self, value):
         self.pos_x = value.pose.pose.position.x 
@@ -142,12 +143,6 @@ class DataCollection():
                                                     self.delta_str,
                                                     self.delta_thr,
                                                     self.delta_brk)
-        self.last_steering = self.steering
-        self.last_throttle = self.throttle
-        self.last_brake    = self.brake
-        self.delta_str = 0
-        self.delta_thr = 0
-        self.delta_brk = 0
         
         self.text.write(line)                                                 
 

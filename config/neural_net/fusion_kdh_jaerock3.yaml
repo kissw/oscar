@@ -10,8 +10,8 @@ version: 0.92
 ## neural network 
 
 # network definition
-model: freeze           # base, delta
-delta_run: False
+model: base           # base, delta
+delta_run: True
 network_type: 9       # refer to neural_net/const.py
 delta_network_type: 9       # refer to neural_net/const.py
 gpus: 0
@@ -34,7 +34,7 @@ samples_per_bin: 4000
 # data_shuffle: True
 validation_rate: 0.3 #if data_split is True
 num_epochs: 500
-batch_size: 16
+batch_size: 1
 num_inputs: 6     # input: image, velocity
 num_outputs: 2    # output: steering_angle, throttle
 early_stopping_patience: 200

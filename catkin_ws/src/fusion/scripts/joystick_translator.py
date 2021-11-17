@@ -57,7 +57,7 @@ SMALL_VALUE = 0.0001
 class Translator:
     def __init__(self):
         self.sub = rospy.Subscriber("joy", Joy, self.callback)
-        self.pub = rospy.Publisher('fusion', Control, queue_size=1)
+        self.pub = rospy.Publisher('fusion2', Control, queue_size=1)
         self.sub_vel = rospy.Subscriber("base_pose_ground_truth", Odometry, self.cbVel)
         
         self.last_published_time = rospy.get_rostime()
@@ -140,3 +140,4 @@ if __name__ == '__main__':
     rospy.init_node('joystick_translator')
     t = Translator()
     rospy.spin()
+1

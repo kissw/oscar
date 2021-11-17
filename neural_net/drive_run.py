@@ -16,25 +16,25 @@ import tensorflow as tf
 ###############################################################################
 #
 
-delta = None
-standard = None
-graph = tf.get_default_graph()
-def predict_func(model, np_img, np_img_tb, npvel, name):
-    global delta
-    global standard
-    global graph
-    if name == 'delta':
-        with graph.as_default():
-            # print(np_img.shape)
-            delta = model.predict([np_img, np_img_tb, npvel])
-        # print(delta[0])
-    elif name == 'standard':
-        with graph.as_default():
-            # print(np_img.shape)
-            standard = model.predict([np_img, np_img_tb, npvel])
-        # print(standard[0])
-    tf.reset_default_graph()
-    return
+# delta = None
+# standard = None
+# graph = tf.get_default_graph()
+# def predict_func(model, np_img, np_img_tb, npvel, name):
+#     global delta
+#     global standard
+#     global graph
+#     if name == 'delta':
+#         with graph.as_default():
+#             # print(np_img.shape)
+#             delta = model.predict([np_img, np_img_tb, npvel])
+#         # print(delta[0])
+#     elif name == 'standard':
+#         with graph.as_default():
+#             # print(np_img.shape)
+#             standard = model.predict([np_img, np_img_tb, npvel])
+#         # print(standard[0])
+#     tf.reset_default_graph()
+#     return
         
 class DriveRun:
     
@@ -55,25 +55,41 @@ class DriveRun:
         vel = input[2]
         np_img = np.expand_dims(image, axis=0)
         np_img_tb = np.expand_dims(image_tb, axis=0)
-        
-        np_img = np_img.reshape(-1, 
-                                                Config.neural_net['lstm_timestep'], 
-                                                Config.neural_net['input_image_height'],
-                                                Config.neural_net['input_image_width'],
-                                                Config.neural_net['input_image_depth'])
-        np_img_tb = np_img_tb.reshape(-1, 
-                                                Config.neural_net['lstm_timestep'], 
-                                                Config.neural_net['input_image_height'],
-                                                Config.neural_net['input_image_width'],
-                                                Config.neural_net['input_image_depth'])
-        npvel = np.expand_dims(vel, axis=0).reshape(-1,
-                                                    Config.neural_net['lstm_timestep'],
-                                                    1)
-        
-        predict = self.net_model.model.predict([np_img, np_img_tb, npvel])
-        steering_angle = predict[0][0]
-        steering_angle /= Config.neural_net['steering_angle_scale']
-        predict[0][0] = steering_angle
+        if Config.neural_net['lstm'] == True: 
+            np_img = np_img.reshape(-1, 
+                                    Config.neural_net['lstm_timestep'], 
+                                    Config.neural_net['input_image_height'],
+                                    Config.neural_net['input_image_width'],
+                                    Config.neural_net['input_image_depth'])
+            np_img_tb = np_img_tb.reshape(-1, 
+                                            Config.neural_net['lstm_timestep'], 
+                                            Config.neural_net['input_image_height'],
+                                            Config.neural_net['input_image_width'],
+                                            Config.neural_net['input_image_depth'])
+            npvel = np.expand_dims(vel, axis=0).reshape(-1,
+                                                        Config.neural_net['lstm_timestep'],
+                                                        1)
+            predict = self.net_model.model.predict([np_img, np_img_tb, npvel])
+            steering_angle = predict[0][0]
+            steering_angle /= Config.neural_net['steering_angle_scale']
+            predict[0][0] = steering_angle
+        else:
+            np_img = np_img.reshape(-1, 
+                                            Config.neural_net['input_image_height'],
+                                            Config.neural_net['input_image_width'],
+                                            Config.neural_net['input_image_depth'])
+            np_img_tb = np_img_tb.reshape(-1, 
+                                            Config.neural_net['input_image_height'],
+                                            Config.neural_net['input_image_width'],
+                                            Config.neural_net['input_image_depth'])
+            npvel = np.expand_dims(vel, axis=0).reshape(-1,1)
+            # print(len(npvel))
+            predict = self.net_model.model.predict([np_img, np_img_tb, npvel])
+            steering_angle = predict[0][0]
+            steering_angle /= Config.neural_net['steering_angle_scale']
+            # print(steering_angle)
+            predict[0][0] = steering_angle
+            # predict
 
         return predict
     
@@ -84,6 +100,9 @@ class DriveRun:
         image = input[0]
         image_tb = input[1]
         vel = input[2]
+        delta_image = input[3]
+        delta_image_tb = input[4]
+        delta_vel = input[5]
         # np_img = tf.placeholder('float', shape = [None, Config.neural_net['input_image_height'], Config.neural_net['input_image_width'], Config.neural_net['input_image_depth']]) 
         # np_img_tb = tf.placeholder('float', shape = [None, Config.neural_net['input_image_height'], Config.neural_net['input_image_width'], Config.neural_net['input_image_depth']]) 
         # npvel = tf.placeholder('float', shape = [None, 1]) 
@@ -91,37 +110,53 @@ class DriveRun:
                 
         np_img = np.expand_dims(image, axis=0)
         np_img_tb = np.expand_dims(image_tb, axis=0)
+        np_delta_img = np.expand_dims(delta_image, axis=0)
+        np_delta_img_tb = np.expand_dims(delta_image_tb, axis=0)
+        
         
         np_img = np_img.reshape(-1, 
-                                                Config.neural_net['lstm_timestep'], 
                                                 Config.neural_net['input_image_height'],
                                                 Config.neural_net['input_image_width'],
                                                 Config.neural_net['input_image_depth'])
         np_img_tb = np_img_tb.reshape(-1, 
+                                                Config.neural_net['input_image_height'],
+                                                Config.neural_net['input_image_width'],
+                                                Config.neural_net['input_image_depth'])
+        np_vel = np.expand_dims(vel, axis=0).reshape(-1, 1)
+        
+        
+        np_delta_img = np_delta_img.reshape(-1, 
                                                 Config.neural_net['lstm_timestep'], 
                                                 Config.neural_net['input_image_height'],
                                                 Config.neural_net['input_image_width'],
                                                 Config.neural_net['input_image_depth'])
-        npvel = np.expand_dims(vel, axis=0).reshape(-1,
+        np_delta_img_tb = np_delta_img_tb.reshape(-1, 
+                                                Config.neural_net['lstm_timestep'], 
+                                                Config.neural_net['input_image_height'],
+                                                Config.neural_net['input_image_width'],
+                                                Config.neural_net['input_image_depth'])
+        np_delta_vel = np.expand_dims(delta_vel, axis=0).reshape(-1,
                                                     Config.neural_net['lstm_timestep'],
                                                     1)
         # thread_input = [np_img, np_img_tb, npvel]
         # start = time.time()
-        th1 = Thread(target=predict_func, args=(self.net_model.model, np_img, np_img_tb, npvel, 'standard'))
-        th2 = Thread(target=predict_func, args=(self.net_model.delta_model, np_img, np_img_tb, npvel, 'delta'))
-        th1.start()
-        th2.start()
-        th1.join()
-        th2.join()
+        #####################
+        # th1 = Thread(target=predict_func, args=(self.net_model.model, np_img, np_img_tb, npvel, 'standard'))
+        # th2 = Thread(target=predict_func, args=(self.net_model.delta_model, np_img, np_img_tb, npvel, 'delta'))
+        # th1.start()
+        # th2.start()
+        # th1.join()
+        # th2.join()
+        ######################
         # print("thread : ",time.time()-start)
         # start = time.time()
-        # predict = self.net_model.model.predict([np_img, np_img_tb, npvel])
-        # delta_predict = self.net_model.delta_model.predict([np_img, np_img_tb, npvel])
+        predict = self.net_model.model.predict([np_img, np_img_tb, np_vel])
+        delta_predict = self.net_model.delta_model.predict([np_delta_img, np_delta_img_tb, np_delta_vel])
         # print("non : ",time.time()-start)
         
-        # steering_angle = predict[0][0]
-        # steering_angle /= Config.neural_net['steering_angle_scale']
-        # predict[0][0] = steering_angle
+        steering_angle = predict[0][0]
+        steering_angle /= Config.neural_net['steering_angle_scale']
+        predict[0][0] = steering_angle
 
-        return standard, delta
+        return predict, delta_predict
     
