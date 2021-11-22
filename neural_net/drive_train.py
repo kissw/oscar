@@ -192,7 +192,7 @@ class DriveTrain:
                 data_path = self.v_data_path
             for image_name, velocity, measurement in batch_samples:
                 image_path = data_path + '/' + image_name
-                # print(image_path)
+                print(image_path)
                 image = cv2.imread(image_path)
                 # if collected data is not cropped then crop here
                 # otherwise do not crop.
@@ -204,9 +204,9 @@ class DriveTrain:
                                     config['input_image_height']))
                 image = self.image_process.process(image)
                 # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
-                if data == 'train':
-                    cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
-                
+                # if data == 'train':
+                #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                # print(image.shape)
                 images.append(image)
                 
                 velocities.append(velocity)
@@ -220,7 +220,7 @@ class DriveTrain:
                 if config['num_outputs'] == 2:                
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle))
                     steer.append(steering_angle*config['steering_angle_scale'])
-                    thr.append(throttle)
+                    thr.append(throttle*config['throttle_angle_scale'])
                 else:
                     measurements.append(steering_angle*config['steering_angle_scale'])
                     steer.append(steering_angle*config['steering_angle_scale'])
@@ -236,7 +236,7 @@ class DriveTrain:
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle))
                         steer.append(steering_angle*config['steering_angle_scale'])
-                        thr.append(throttle)
+                        thr.append(throttle*config['throttle_angle_scale'])
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
                         steer.append(steering_angle*config['steering_angle_scale'])
@@ -335,24 +335,19 @@ class DriveTrain:
 
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
-                        
+                        # print(len(batch_samples))
                         images, velocities, _, steer, thr = _prepare_batch_samples(batch_samples, data)
-                        X_train_str = np.array(images)
-                        y_train_str = np.array(steer).reshape(-1,1)#.reshape(2,32)
-                        y_train_thr = np.array(thr).reshape(-1,1)#.reshape(2,32)
-                        # y_train = np.transpose(y_train)
-                        # print(y_train_str.shape)
                         if config['num_inputs'] == 2:
+                            X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
-                            # print(X_train_str.shape)
                             X_train = [X_train_str, X_train_vel]
-                            # X_train = np.stack([X_train_str, X_train_vel], axis=4)
-                            # print(X_train[0].shape)
-                            y_train = [y_train_str, y_train_thr]
-                        else:
-                            X_train = X_train_str
                             
-                        yield sklearn.utils.shuffle(X_train, y_train)
+                            y_train_str = np.array(steer).reshape(-1,1)
+                            y_train_thr = np.array(thr).reshape(-1,1)
+                            y_train = [y_train_str, y_train_thr]
+                            
+                        yield X_train, y_train
+                        
         if config['data_split'] is True:
             self.train_generator = _generator(self.train_data)
             self.valid_generator = _generator(self.valid_data)       
@@ -402,7 +397,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=48)
+                workers=1)
         
     ###########################################################################
     #
