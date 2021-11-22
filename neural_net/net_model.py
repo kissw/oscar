@@ -49,10 +49,10 @@ def model_pilotnet():
     fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
     fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
     fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
-    fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
-    # fc_str = Dense(1, name='fc_str')(fc_3)
-    # fc_thr = Dense(1, name='fc_thr')(fc_3)
-    model = Model(inputs=[img_input, vel_input], outputs=fc_out)
+    # fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
+    fc_str = Dense(1, name='fc_str')(fc_3)
+    fc_thr = Dense(1, name='fc_thr')(fc_3)
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
 
     return model
 

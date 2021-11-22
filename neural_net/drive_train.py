@@ -182,6 +182,8 @@ class DriveTrain:
             images = []
             velocities = []
             measurements = []
+            steer = []
+            thr = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
@@ -217,8 +219,11 @@ class DriveTrain:
 
                 if config['num_outputs'] == 2:                
                     measurements.append((steering_angle*config['steering_angle_scale'], throttle))
+                    steer.append(steering_angle*config['steering_angle_scale'])
+                    thr.append(throttle)
                 else:
                     measurements.append(steering_angle*config['steering_angle_scale'])
+                    steer.append(steering_angle*config['steering_angle_scale'])
                     # print("1 : ", steering_angle)
                 
                 # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
@@ -230,10 +235,13 @@ class DriveTrain:
                     velocities.append(velocity)
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle))
+                        steer.append(steering_angle*config['steering_angle_scale'])
+                        thr.append(throttle)
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
+                        steer.append(steering_angle*config['steering_angle_scale'])
 
-            return images, velocities, measurements
+            return images, velocities, measurements ,steer, thr
 
         def _prepare_lstm_batch_samples(batch_samples, data=None):
             images = []
@@ -328,13 +336,21 @@ class DriveTrain:
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
                         
-                        images, velocities, measurements = _prepare_batch_samples(batch_samples, data)
-                        X_train = np.array(images)
-                        y_train = np.array(measurements)
-                        
+                        images, velocities, _, steer, thr = _prepare_batch_samples(batch_samples, data)
+                        X_train_str = np.array(images)
+                        y_train_str = np.array(steer).reshape(-1,1)#.reshape(2,32)
+                        y_train_thr = np.array(thr).reshape(-1,1)#.reshape(2,32)
+                        # y_train = np.transpose(y_train)
+                        # print(y_train_str.shape)
                         if config['num_inputs'] == 2:
                             X_train_vel = np.array(velocities).reshape(-1, 1)
-                            X_train = [X_train, X_train_vel]
+                            # print(X_train_str.shape)
+                            X_train = [X_train_str, X_train_vel]
+                            # X_train = np.stack([X_train_str, X_train_vel], axis=4)
+                            # print(X_train[0].shape)
+                            y_train = [y_train_str, y_train_thr]
+                        else:
+                            X_train = X_train_str
                             
                         yield sklearn.utils.shuffle(X_train, y_train)
         if config['data_split'] is True:
