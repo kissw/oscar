@@ -10,7 +10,7 @@ History:
 # -*- coding: utf-8 -*-
 """
 
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, model_from_json
 from keras.layers import Lambda, Dropout, Flatten, Dense, Activation, Concatenate
 from keras.layers import Conv2D, Convolution2D, BatchNormalization, Input
 from keras.layers import MaxPooling2D, GlobalAveragePooling2D, AveragePooling2D, Add
@@ -40,9 +40,9 @@ def model_pilotnet():
     
     conv_1 = Conv2D(24, (5, 5), strides=(2,2), activation='relu', name='conv2d_1')(lamb_str)
     conv_2 = Conv2D(36, (5, 5), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
-    conv_3 = Conv2D(48, (5, 5), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
-    conv_4 = Conv2D(64, (3, 3), activation='relu', name='conv2d_4')(conv_3)
-    conv_5 = Conv2D(64, (3, 3), activation='relu', name='conv2d_last')(conv_4)
+    conv_3 = Conv2D(64, (5, 5), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (3, 3), padding='same',activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (3, 3), padding='same',activation='relu', name='conv2d_last')(conv_4)
     flat = Flatten()(conv_5)
     fc_v = Dense(50, activation='relu', name='fc_v')(lamb_vel)
     fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
@@ -53,11 +53,90 @@ def model_pilotnet():
     fc_str = Dense(1, name='fc_str')(fc_3)
     fc_thr = Dense(1, name='fc_thr')(fc_3)
     model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
-
     return model
 
+def model_style1(base_model_path):
+    #'/mnt/Data/oscar/dst/zero2/all/2021-11-11-00-00-00_fusion_kdh_jaerock3_N8.h5'
+    base_weightsfile = base_model_path+'.h5'
+    base_modelfile   = base_model_path+'.json'
+    
+    base_json_file = open(base_modelfile, 'r')
+    base_loaded_model_json = base_json_file.read()
+    base_json_file.close()
+    base_model = model_from_json(base_loaded_model_json)
+    base_model.load_weights(base_weightsfile)
+    base_model.trainable = False
+    
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    input_vel = (1,)
+    base_model_conv3 = None
+    base_model_conv5 = None
+    ######model#######
+    img_input = Input(shape=input_shape)
+    vel_input = Input(shape=input_vel)
+    lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    lamb_vel = Lambda(lambda x: x/40)(vel_input)
+    
+    base_model_output = base_model([lamb_str, lamb_vel])
+    base_model.summary()
+    # print(base_model.layers[6].name)
+    if base_model.layers[4].name == 'conv2d_3':
+        base_model_conv3 = base_model.layers[4].output
+    if base_model.layers[6].name == 'conv2d_last':
+        base_model_conv5 = base_model.layers[6].output
+        paddings = tf.constant([[0,0], [2, 2], [2, 2],[0,0]])
+        base_model_conv5 = tf.pad(base_model_conv5, paddings, "CONSTANT")
+    
+    add_base_layer = Add()([base_model_conv3, base_model_conv5])
+    base_model_conv_vel_output = Concatenate()([add_base_layer, base_model_output])
+    
+    fc_1 = Dense(500, activation='relu', name='fc_1')(base_model_conv_vel_output)
+    drop = Dropout(rate=0.2)(fc_1)
+    fc_2 = Dense(100, activation='relu', name='fc_1')(drop)
+    fc_str = Dense(1, name='fc_str')(fc_2)
+    fc_thr = Dense(1, name='fc_thr')(fc_2)
+    
+    # print(base_model_conv3)
+    # print(base_model_conv5)
+    
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
+    return model
+    
+def model_nonlstm():
+    input_shape = (config['lstm_timestep'], config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    input_vel = (config['lstm_timestep'], 1,)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    vel_input = Input(shape=input_vel)
+    lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    lamb_vel = Lambda(lambda x: x/40)(vel_input)
+    
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2), activation='relu'), name='conv2d')(lamb_str)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2), activation='relu'), name='conv2d_2')(conv_1)
+    conv_3 = TimeDistributed(Conv2D(64, (5, 5), strides=(2,2), activation='relu'), name='conv2d_3')(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3), padding='same',activation='relu'), name='conv2d_4')(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3), padding='same',activation='relu'), name='conv2d_last')(conv_4)
+    flat   = TimeDistributed(Flatten())(conv_5)
+    fc_v   = TimeDistributed(Dense( 50, activation='relu'), name='fc_v')(lamb_vel)
+    fc_1   = TimeDistributed(Dense(100, activation='relu'), name='fc_1')(flat)
+    conc   = Concatenate()([fc_1, fc_v])
+    fc_2   = TimeDistributed(Dense( 50, activation='relu'), name='fc_2')(conc)
+    fc_3   = TimeDistributed(Dense( 10, activation='relu'), name='fc_3')(fc_2)
+    # lstm   = LSTM(1, return_sequences=False, name='lstm_c')(fc_3)
+    # fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
+    flat_2 = Flatten()(fc_3)
+    fc_str = Dense(1, name='fc_str')(flat_2)
+    fc_thr = Dense(1, name='fc_thr')(flat_2)
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
+    return model
+    
+
 class NetModel:
-    def __init__(self, model_path):
+    def __init__(self, model_path, base_model_path=None):
         self.model = None
         model_name = model_path[model_path.rfind('/'):] # get folder name
         self.name = model_name.strip('/')
@@ -73,13 +152,20 @@ class NetModel:
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         K.tensorflow_backend.set_session(sess)
         # with tf.device('/cpu:0'):
-        self._model()
+        
+        self._model(base_model_path=base_model_path)
 
     ###########################################################################
     #
-    def _model(self):
+    def _model(self, base_model_path = None):
         if config['network_type'] == const.NET_TYPE_PILOT:
             self.model = model_pilotnet()
+        elif config['network_type'] == const.NET_TYPE_STYLE1:
+            self.model = model_style1(base_model_path)
+        elif config['network_type'] == const.NET_TYPE_STYLE2:
+            self.model = model_style2(base_model_path)
+        elif config['network_type'] == const.NET_TYPE_NONLSTM:
+            self.model = model_nonlstm()
         else:
             exit('ERROR: Invalid neural network type.')
 

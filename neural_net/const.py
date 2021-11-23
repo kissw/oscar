@@ -13,7 +13,9 @@ History:
 # network model type
 
 NET_TYPE_PILOT      = 1
-
+NET_TYPE_STYLE1     = 2
+NET_TYPE_STYLE2     = 3
+NET_TYPE_NONLSTM    = 4
 # file extension
 DATA_EXT             = '.csv'
 IMAGE_EXT            = '.jpg'

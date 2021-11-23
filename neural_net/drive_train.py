@@ -32,7 +32,7 @@ class DriveTrain:
     
     ###########################################################################
     # data_path = 'path_to_drive_data'  e.g. ../data/2017-09-22-10-12-34-56/'
-    def __init__(self, data_path):
+    def __init__(self, data_path, base_model_path=None):
         
         if data_path[-1] == '/':
             data_path = data_path[:-1]
@@ -67,7 +67,7 @@ class DriveTrain:
             self.v_data = DriveData(data_path+'/valid/'+ model_name+'/'+ model_name + const.DATA_EXT)
             self.t_data_path = data_path+'/train/'+ model_name
             self.v_data_path = data_path+'/valid/'+ model_name
-        self.net_model = NetModel(data_path)
+        self.net_model = NetModel(data_path, base_model_path=base_model_path)
         self.image_process = ImageProcess()
         self.data_aug = DataAugmentation()
         
@@ -122,6 +122,7 @@ class DriveTrain:
             timestep_image_names = []
             timestep_measurements = []
             timestep_velocities = []
+            timestep_image_times = []
             for image_name, velocity, measurment in timestep_samples:
                 timestep_image_names.append(image_name)
                 timestep_measurements.append(measurment)
@@ -192,7 +193,7 @@ class DriveTrain:
                 data_path = self.v_data_path
             for image_name, velocity, measurement in batch_samples:
                 image_path = data_path + '/' + image_name
-                print(image_path)
+                # print(image_path)
                 image = cv2.imread(image_path)
                 # if collected data is not cropped then crop here
                 # otherwise do not crop.
@@ -247,6 +248,8 @@ class DriveTrain:
             images = []
             velocities = []
             measurements = []
+            steer = []
+            thr = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
@@ -261,6 +264,8 @@ class DriveTrain:
                 images_aug_timestep = []
                 velocities_aug_timestep = []
                 measurements_aug_timestep = []
+                steer_timestep = []
+                thr_timestep = []
                 for j in range(0, config['lstm_timestep']):
                     image_name = batch_samples[i][0][j]
                     image_path = data_path + '/' + image_name
@@ -289,28 +294,20 @@ class DriveTrain:
                             
                         if config['num_outputs'] == 2:                
                             measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
+                            steer_timestep.append(steering_angle*config['steering_angle_scale'])
+                            thr_timestep.append(throttle*config['throttle_angle_scale'])
                         else:
                             measurements_timestep.append(steering_angle*config['steering_angle_scale'])
+                            steer_timestep.append(steering_angle*config['steering_angle_scale'])
                 
-                    append, image, steering_angle = _data_augmentation(image, steering_angle)
-                    if append is True:
-                        images_aug_timestep.append(image)
-                        velocities_aug_timestep.append(velocity)
-                        if config['num_outputs'] == 2:                
-                            measurements_aug_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
-                        else:
-                            measurements_aug_timestep.append(steering_angle*config['steering_angle_scale'])
 
                 images.append(images_timestep)
                 velocities.append(velocities_timestep)
                 measurements.append(measurements_timestep)
+                steer.append(steer_timestep)
+                thr.append(thr_timestep)
                 
-                if append is True:
-                    images.append(images_aug_timestep)
-                    velocities.append(velocities_aug_timestep)
-                    measurements.append(measurements_aug_timestep)
-                
-            return images, velocities, measurements
+            return images, velocities, measurements, steer, thr
         
         def _generator(samples, batch_size=config['batch_size'], data=None):
             num_samples = len(samples)
@@ -319,15 +316,24 @@ class DriveTrain:
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
 
-                        images, velocities, measurements = _prepare_lstm_batch_samples(batch_samples, data)
+                        images, velocities, measurements, steer, thr = _prepare_lstm_batch_samples(batch_samples, data)
                         
                         if config['num_inputs'] == 1:
                             X_train = np.array(images)
                         elif config['num_inputs'] == 2:
+                            X_train = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
                             X_train = [X_train, X_train_vel]
+                            
+                        if config['num_outputs'] == 1:
+                            y_train = np.array(measurements)
+                        elif config['num_outputs'] == 2:
+                            # print(y_train_str.shape)
+                            y_train_str = np.array(steer).reshape(-1,1)
+                            y_train_thr = np.array(thr).reshape(-1,1)
+                            y_train = [y_train_str, y_train_thr]
                         
-                        y_train = np.array(measurements)
+                        # print(X_train_vel.shape)
                         yield X_train, y_train
                         
                 else: 
