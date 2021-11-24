@@ -342,15 +342,17 @@ class DriveTrain:
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
                         # print(len(batch_samples))
-                        images, velocities, _, steer, thr = _prepare_batch_samples(batch_samples, data)
+                        images, velocities, measurements, steer, thr = _prepare_batch_samples(batch_samples, data)
                         if config['num_inputs'] == 2:
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_vel]
-                            
-                            y_train_str = np.array(steer).reshape(-1,1)
-                            y_train_thr = np.array(thr).reshape(-1,1)
-                            y_train = [y_train_str, y_train_thr]
+                        
+                        if config['num_outputs'] == 2:
+                            y_train = np.array(measurements)
+                            # y_train_str = np.array(steer).reshape(-1,1)
+                            # y_train_thr = np.array(thr).reshape(-1,1)
+                            # y_train = [y_train_str, y_train_thr]
                             
                         yield X_train, y_train
                         

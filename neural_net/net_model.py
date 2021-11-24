@@ -50,9 +50,9 @@ def model_pilotnet():
     fc_2 = Dense(50 , activation='relu', name='fc_2')(conc)
     fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
     # fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
-    fc_str = Dense(1, name='fc_str')(fc_3)
-    fc_thr = Dense(1, name='fc_thr')(fc_3)
-    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
+    fc_str = Dense(2, name='fc_str')(fc_3)
+    # fc_thr = Dense(1, name='fc_thr')(fc_3)
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_str])
     return model
 
 def model_style1(base_model_path):
@@ -80,19 +80,24 @@ def model_style1(base_model_path):
     lamb_vel = Lambda(lambda x: x/40)(vel_input)
     
     base_model_output = base_model([lamb_str, lamb_vel])
-    base_model.summary()
-    # print(base_model.layers[6].name)
-    if base_model.layers[4].name == 'conv2d_3':
-        base_model_conv3 = base_model.layers[4].output
-    if base_model.layers[6].name == 'conv2d_last':
-        base_model_conv5 = base_model.layers[6].output
-        paddings = tf.constant([[0,0], [2, 2], [2, 2],[0,0]])
-        base_model_conv5 = tf.pad(base_model_conv5, paddings, "CONSTANT")
+    # base_model.summary()
+    # # print(base_model.layers[6].name)
+    # # if base_model.layers[4].name == 'conv2d_3':
+    # base_model_conv3 = base_model.layers[4].output
+    # # if base_model.layers[6].name == 'conv2d_last':
+    # base_model_conv5 = base_model.layers[6].output
+    # # paddings = tf.constant([[0,0], [2, 2], [2, 2],[0,0]])
+    # # base_model_conv5 = tf.pad(base_model_conv5, paddings, "CONSTANT")
     
-    add_base_layer = Add()([base_model_conv3, base_model_conv5])
-    base_model_conv_vel_output = Concatenate()([add_base_layer, base_model_output])
+    # add_base_layer = Add()([base_model.layers[4], base_model.layers[6]])
+    # flat = Flatten()(add_base_layer)
+    # # flat_2 = Flatten()(base_model_output)
+    # fc_base_out1 = Dense(10, activation='relu', name='fc_base_out1')([base_model_output])
+    # # fc_base_out2 = Dense(10, activation='relu', name='fc_base_out2')(base_model_output[1])
+    # base_model_conv_vel_output = Concatenate()([flat, fc_base_out1])
+    # # base_model_conv_vel_output = Concatenate()([flat, fc_base_out1, fc_base_out2])
     
-    fc_1 = Dense(500, activation='relu', name='fc_1')(base_model_conv_vel_output)
+    fc_1 = Dense(500, activation='relu', name='fc_1')(base_model_output)
     drop = Dropout(rate=0.2)(fc_1)
     fc_2 = Dense(100, activation='relu', name='fc_1')(drop)
     fc_str = Dense(1, name='fc_str')(fc_2)
@@ -102,6 +107,7 @@ def model_style1(base_model_path):
     # print(base_model_conv5)
     
     model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
+    model.summary()
     return model
     
 def model_nonlstm():
