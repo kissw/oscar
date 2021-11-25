@@ -56,8 +56,8 @@ SMALL_VALUE = 0.0001
 
 class Translator:
     def __init__(self):
-        self.sub = rospy.Subscriber("joy", Joy, self.callback)
-        self.pub = rospy.Publisher('fusion', Control, queue_size=1)
+        self.sub = rospy.Subscriber("joy", Joy, self.callback)        
+        self.pub = rospy.Publisher('fusion', Control, queue_size=10)
         self.sub_vel = rospy.Subscriber("base_pose_ground_truth", Odometry, self.cbVel)
         
         self.last_published_time = rospy.get_rostime()
@@ -67,8 +67,7 @@ class Translator:
         self.kill_data_collection = False
         self.command = Control()
         print('steer \tthrt: \tbrake \tvelocity')
-        
-        
+                
     def timer_callback(self, event):
         if self.last_published and self.last_published_time < rospy.get_rostime() + rospy.Duration(1.0/20.):
             self.callback(self.last_published)
@@ -77,33 +76,35 @@ class Translator:
         vel_x = msg.twist.twist.linear.x 
         vel_y = msg.twist.twist.linear.y
         vel_z = msg.twist.twist.linear.z
-        
-        
-        
-        cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f}\r'.format(self.command.steer, 
-                          self.command.throttle, self.command.brake, math.sqrt(vel_x**2 + vel_y**2 + vel_z**2))
+                
+        # cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f}\r'.format(self.command.steer, 
+        #                   self.command.throttle, self.command.brake, math.sqrt(vel_x**2 + vel_y**2 + vel_z**2))
 
-        sys.stdout.write(cur_output)
-        sys.stdout.flush()
+        # sys.stdout.write(cur_output)
+        # sys.stdout.flush()
     
     def callback(self, message):
         rospy.logdebug("joy_translater received axes %s",message.axes)
         command = Control()
         command.header = message.header
-
-        if message.axes[BRAKE_AXIS] > BRAKE_POINT:
-		    command.brake = 1.0
+        # if message.axes[BRAKE_AXIS] > BRAKE_POINT:
+		#     command.brake = 1.0
 
         # Note: init value of axes are all zeros
         # --> problem with -1 to 1 range values like brake
-        if message.axes[BRAKE_AXIS] > -1*SMALL_VALUE and message.axes[BRAKE_AXIS] < SMALL_VALUE:
-		    command.brake = 0.0
+        # if message.axes[BRAKE_AXIS] > -1*SMALL_VALUE and message.axes[BRAKE_AXIS] < SMALL_VALUE:
+		#     command.brake = 0.0
 
-        if message.axes[THROTTLE_AXIS] >= 0:
-            command.throttle = message.axes[THROTTLE_AXIS]
-            command.brake = 0.0
-        else:
-            command.throttle = 0.0
+        # if message.axes[THROTTLE_AXIS] >= 0:
+        #     command.throttle = message.axes[THROTTLE_AXIS]
+        #     command.brake = 0.0
+        # else:
+        #     command.throttle = 0.0
+        
+        command.throttle = (1 + message.axes[THROTTLE_AXIS])/2
+        command.brake = (1 + message.axes[BRAKE_AXIS])/0.38
+        if command.brake > 1.0:
+            command.brake = 1.0
         
         if message.buttons[SHIFT_FORWARD] == 1:
             self.gear = "forward"
@@ -133,10 +134,12 @@ class Translator:
             command.shift_gears = Control.NO_COMMAND
 
         command.steer = message.axes[STEERING_AXIS]
+        
         self.last_published = message
         self.pub.publish(command)
         self.command = command
-
+            
+        
 if __name__ == '__main__':
     rospy.init_node('joystick_translator')
     t = Translator()

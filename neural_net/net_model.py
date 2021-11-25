@@ -55,8 +55,7 @@ def model_pilotnet():
     model = Model(inputs=[img_input, vel_input], outputs=[fc_str])
     return model
 
-def model_style1(base_model_path):
-    #'/mnt/Data/oscar/dst/zero2/all/2021-11-11-00-00-00_fusion_kdh_jaerock3_N8.h5'
+def pretrained_pilot(base_model_path):
     base_weightsfile = base_model_path+'.h5'
     base_modelfile   = base_model_path+'.json'
     
@@ -67,47 +66,42 @@ def model_style1(base_model_path):
     base_model.load_weights(base_weightsfile)
     base_model.trainable = False
     
+    # print(base_model.get_layer('conv2d_3').output)
+    return base_model
+
+def model_style1(base_model_path):
+
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'],)
     input_vel = (1,)
-    base_model_conv3 = None
-    base_model_conv5 = None
     ######model#######
     img_input = Input(shape=input_shape)
     vel_input = Input(shape=input_vel)
-    lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
-    lamb_vel = Lambda(lambda x: x/40)(vel_input)
     
-    base_model_output = base_model([lamb_str, lamb_vel])
-    # base_model.summary()
-    # # print(base_model.layers[6].name)
-    # # if base_model.layers[4].name == 'conv2d_3':
-    # base_model_conv3 = base_model.layers[4].output
-    # # if base_model.layers[6].name == 'conv2d_last':
-    # base_model_conv5 = base_model.layers[6].output
-    # # paddings = tf.constant([[0,0], [2, 2], [2, 2],[0,0]])
-    # # base_model_conv5 = tf.pad(base_model_conv5, paddings, "CONSTANT")
+    base_model = pretrained_pilot(base_model_path)
+    pretrained_model_last = Model(base_model.input, base_model.get_layer('fc_str').output)
+    pretrained_model_conv3 = Model(base_model.input, base_model.get_layer('conv2d_3').output)
+    pretrained_model_conv5 = Model(base_model.input, base_model.get_layer('conv2d_last').output)
+    pretrained_model_conv3.trainable = False
+    pretrained_model_conv5.trainable = False
+    pretrained_model_last.trainable = False
     
-    # add_base_layer = Add()([base_model.layers[4], base_model.layers[6]])
-    # flat = Flatten()(add_base_layer)
-    # # flat_2 = Flatten()(base_model_output)
-    # fc_base_out1 = Dense(10, activation='relu', name='fc_base_out1')([base_model_output])
-    # # fc_base_out2 = Dense(10, activation='relu', name='fc_base_out2')(base_model_output[1])
-    # base_model_conv_vel_output = Concatenate()([flat, fc_base_out1])
-    # # base_model_conv_vel_output = Concatenate()([flat, fc_base_out1, fc_base_out2])
+    base_model_last_output = pretrained_model_last([img_input, vel_input])
+    base_model_conv3_output = pretrained_model_conv3([img_input, vel_input])
+    base_model_conv5_output = pretrained_model_conv5([img_input, vel_input])
     
-    fc_1 = Dense(500, activation='relu', name='fc_1')(base_model_output)
-    drop = Dropout(rate=0.2)(fc_1)
-    fc_2 = Dense(100, activation='relu', name='fc_1')(drop)
-    fc_str = Dense(1, name='fc_str')(fc_2)
-    fc_thr = Dense(1, name='fc_thr')(fc_2)
+    add_base_layer = Add()([base_model_conv3_output, base_model_conv5_output])
+    fc_base_out = Dense(100, activation='relu', name='fc_base_out')(base_model_last_output)
+    flat = Flatten()(add_base_layer)
+    fc_1 = Dense(500, activation='relu', name='fc_1')(flat)
+    conc = Concatenate()([fc_base_out, fc_1])
+    fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
+    drop = Dropout(rate=0.2)(fc_2)
+    fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
+    fc_out = Dense(2, name='fc_out')(fc_3)
     
-    # print(base_model_conv3)
-    # print(base_model_conv5)
-    
-    model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
-    model.summary()
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
     return model
     
 def model_nonlstm():
