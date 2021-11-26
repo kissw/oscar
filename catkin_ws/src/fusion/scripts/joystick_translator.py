@@ -17,6 +17,7 @@
 
 import rospy, math, sys, os
 from fusion.msg import Control
+from std_msgs.msg import Float64
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -59,6 +60,7 @@ class Translator:
         self.sub = rospy.Subscriber("joy", Joy, self.callback)        
         self.pub = rospy.Publisher('fusion', Control, queue_size=10)
         self.sub_vel = rospy.Subscriber("base_pose_ground_truth", Odometry, self.cbVel)
+        self.pub_vel = rospy.Publisher('vel', Float64, queue_size=1)
         
         self.last_published_time = rospy.get_rostime()
         self.last_published = None
@@ -66,6 +68,7 @@ class Translator:
         self.gear = 0
         self.kill_data_collection = False
         self.command = Control()
+        self.vel = Float64()
         print('steer \tthrt: \tbrake \tvelocity')
                 
     def timer_callback(self, event):
@@ -82,6 +85,8 @@ class Translator:
 
         # sys.stdout.write(cur_output)
         # sys.stdout.flush()
+        self.vel = math.sqrt(vel_x**2 + vel_y**2 + vel_z**2)
+        self.pub_vel.publish(self.vel)
     
     def callback(self, message):
         rospy.logdebug("joy_translater received axes %s",message.axes)

@@ -219,9 +219,9 @@ class DriveTrain:
                     steering_angle = 0
 
                 if config['num_outputs'] == 2:                
-                    measurements.append((steering_angle*config['steering_angle_scale'], throttle))
+                    measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                     steer.append(steering_angle*config['steering_angle_scale'])
-                    thr.append(throttle*config['throttle_angle_scale'])
+                    thr.append(throttle*config['throttle_scale'])
                 else:
                     measurements.append(steering_angle*config['steering_angle_scale'])
                     steer.append(steering_angle*config['steering_angle_scale'])
@@ -235,9 +235,9 @@ class DriveTrain:
                     images.append(image)
                     velocities.append(velocity)
                     if config['num_outputs'] == 2:                
-                        measurements.append((steering_angle*config['steering_angle_scale'], throttle))
+                        measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                         steer.append(steering_angle*config['steering_angle_scale'])
-                        thr.append(throttle*config['throttle_angle_scale'])
+                        thr.append(throttle*config['throttle_scale'])
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
                         steer.append(steering_angle*config['steering_angle_scale'])
@@ -295,7 +295,7 @@ class DriveTrain:
                         if config['num_outputs'] == 2:                
                             measurements_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
                             steer_timestep.append(steering_angle*config['steering_angle_scale'])
-                            thr_timestep.append(throttle*config['throttle_angle_scale'])
+                            thr_timestep.append(throttle*config['throttle_scale'])
                         else:
                             measurements_timestep.append(steering_angle*config['steering_angle_scale'])
                             steer_timestep.append(steering_angle*config['steering_angle_scale'])
@@ -405,7 +405,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=1)
+                workers=12)
         
     ###########################################################################
     #

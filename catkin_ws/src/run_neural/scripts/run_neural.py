@@ -40,12 +40,12 @@ else:
 config = Config.neural_net
 velocity = 0.0
 class NeuralControl:
-    def __init__(self, weight_file_name):
+    def __init__(self, weight_file_name, base_weight_name=None):
         rospy.init_node('run_neural')
         self.ic = ImageConverter()
         self.image_process = ImageProcess()
         self.rate = rospy.Rate(30)
-        self.drive= DriveRun(weight_file_name)
+        self.drive= DriveRun(weight_file_name, base_weight_name)
         rospy.Subscriber(Config.data_collection['camera_image_topic'], Image, self._controller_cb)
         self.image = None
         self.image_processed = False
@@ -96,10 +96,10 @@ def pos_vel_cb(value):
     
     velocity = math.sqrt(vel_x**2 + vel_y**2 + vel_z**2)
         
-def main(weight_file_name):
+def main(weight_file_name, base_weight_name=None):
 
     # ready for neural network
-    neural_control = NeuralControl(weight_file_name)
+    neural_control = NeuralControl(weight_file_name, base_weight_name)
     
     rospy.Subscriber(Config.data_collection['base_pose_topic'], Odometry, pos_vel_cb)
     # ready for /bolt topic publisher
@@ -136,6 +136,7 @@ def main(weight_file_name):
         
         else :
             if config['num_inputs'] == 2:
+                # print(velocity)
                 prediction = neural_control.drive.run((neural_control.image, velocity))
                 if config['num_outputs'] == 2:
                     # prediction is [ [] ] numpy.ndarray
@@ -209,10 +210,15 @@ def main(weight_file_name):
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 2:
-            exit('Usage:\n$ rosrun run_neural run_neural.py weight_file_name')
-
-        main(sys.argv[1])
+        if config['style_run'] is True:
+            if len(sys.argv) != 3:
+                exit('Usage:\n$ rosrun run_neural run_neural.py style_weight_name base_weight_name')
+            main(sys.argv[1], sys.argv[2])
+                
+        else:
+            if len(sys.argv) != 2:
+                exit('Usage:\n$ rosrun run_neural run_neural.py weight_file_name')
+            main(sys.argv[1])
 
     except KeyboardInterrupt:
         print ('\nShutdown requested. Exiting...')

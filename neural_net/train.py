@@ -25,7 +25,7 @@ def train(data_folder_name, load_model_name=None, base_model_path=None):
 if __name__ == '__main__':
     try:
         if Config.neural_net['weight_load'] is True:
-            if Config.neural_net['delta_train'] is True:
+            if Config.neural_net['style_train'] is True:
                 if (len(sys.argv) != 4):
                     exit('Usage:\n$ python {} data_path load_model_name base_model_name'.format(sys.argv[0]))
                 train(sys.argv[1], load_model_name=sys.argv[2], base_model_path=sys.argv[3])
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 train(sys.argv[1], load_model_name=sys.argv[2])
         
         else:
-            if Config.neural_net['delta_train'] is True:
+            if Config.neural_net['style_train'] is True:
                 if (len(sys.argv) != 3):
                     exit('Usage:\n$ python {} data_path base_model_name'.format(sys.argv[0]))
                 train(sys.argv[1], base_model_path=sys.argv[2])

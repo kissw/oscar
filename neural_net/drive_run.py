@@ -19,11 +19,12 @@ class DriveRun:
     ###########################################################################
     # model_path = 'path_to_pretrained_model_name' excluding '.h5' or 'json'
     # data_path = 'path_to_drive_data'  e.g. ../data/2017-09-22-10-12-34-56'
-    def __init__(self, model_path):
+    def __init__(self, model_path, base_weight_file = None):
         
         #self.config = Config()
-        self.net_model = NetModel(model_path)
+        self.net_model = NetModel(model_path, base_weight_file)
         self.net_model.load()
+        print('Done')
 
    ###########################################################################
     #
@@ -41,7 +42,10 @@ class DriveRun:
             predict = self.net_model.model.predict(np_img)
         # calc scaled steering angle
         steering_angle = predict[0][0]
+        throttle = predict[0][1]
         steering_angle /= Config.neural_net['steering_angle_scale']
+        throttle /= Config.neural_net['throttle_scale']
         predict[0][0] = steering_angle
+        predict[0][1] = throttle
 
         return predict
