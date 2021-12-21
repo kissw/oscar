@@ -19,16 +19,14 @@ from config import Config
 
 class DriveData:
 
-    if Config.data_collection['brake'] is True:
-        csv_header = ['image_fname', 'steering_angle', 'throttle', 'brake', 
-                    'linux_time', 
-                    'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y', 'delta_steering_angle', 'delta_throttle', 'delta_brake']
-    else:
-        csv_header = ['image_fname', 'steering_angle', 'throttle', 
-                    'linux_time', 
-                    'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y']
+    csv_header = ['image_fname', 
+                  'steering_angle', 'throttle', 'brake', 
+                  'linux_time', 
+                  'vel', 'vel_x', 'vel_y', 'vel_z',
+                  'accel_x', 'accel_y', 
+                  'pos_x', 'pos_y', 'pos_z', 
+                  'delta_steering_angle', 'delta_throttle', 'delta_brake']
+
 
     def __init__(self, csv_fname):
         self.csv_fname = csv_fname
@@ -136,9 +134,9 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
-                # self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
-                #                             float(self.df.loc[i]['delta_throttle']),
-                #                             float(self.df.loc[i]['delta_brake'])))
+                self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
+                                            float(self.df.loc[i]['delta_throttle']),
+                                            float(self.df.loc[i]['delta_brake'])))
 
 
     def get_data_path(self):

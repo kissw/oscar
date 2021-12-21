@@ -26,6 +26,8 @@ vehicle_name: fusion
 camera_image_topic: /fusion/front_camera/image_raw
 # vehicle control topic name
 vehicle_control_topic: /fusion
+vehicle_control_topic1: /fusion1
+vehicle_control_topic2: /fusion2
 # p3d - current position and velocity
 base_pose_topic: /base_pose_ground_truth
 # imu topic name
