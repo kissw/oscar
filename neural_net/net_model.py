@@ -32,15 +32,15 @@ def model_pilotnet():
                     config['input_image_width'],
                     config['input_image_depth'],)
     input_vel = (1,)
-    input_delta = (3,)
+    # input_delta = (3,)
     ######model#######
     img_input = Input(shape=input_shape)
     vel_input = Input(shape=input_vel)
-    delta_input = Input(shape=input_delta)
+    # delta_input = Input(shape=input_delta)
     
     lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
     lamb_vel = Lambda(lambda x: x/40)(vel_input)
-    lamb_delta = Lambda(lambda x: x)(delta_input)
+    # lamb_delta = Lambda(lambda x: x)(delta_input)
     
     conv_1 = Conv2D(24, (5, 5), strides=(2,2), activation='relu', name='conv2d_1')(lamb_str)
     conv_2 = Conv2D(36, (5, 5), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
@@ -49,14 +49,16 @@ def model_pilotnet():
     conv_5 = Conv2D(64, (3, 3), padding='same',activation='relu', name='conv2d_last')(conv_4)
     flat = Flatten()(conv_5)
     fc_v = Dense(50, activation='relu', name='fc_v')(lamb_vel)
-    fc_c = Dense(50, activation='relu', name='fc_d')(lamb_delta)
+    # fc_c = Dense(50, activation='relu', name='fc_d')(lamb_delta)
     fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
-    conc = Concatenate()([fc_1, fc_v, fc_c])
+    conc = Concatenate()([fc_1, fc_v])
+    # conc = Concatenate()([fc_1, fc_v, fc_c])
     fc_2 = Dense(50 , activation='relu', name='fc_2')(conc)
     fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
     fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
     
-    model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
     return model
 
 def pretrained_pilot(base_model_path):
@@ -87,7 +89,8 @@ def model_style1(base_model_path):
     base_model1 = pretrained_pilot(base_model_path)
     base_model2 = pretrained_pilot(base_model_path)
     base_model3 = pretrained_pilot(base_model_path)
-    pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_str').output)
+    # pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_str').output)
+    pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_out').output)
     pretrained_model_conv3 = Model(base_model2.input, base_model2.get_layer('conv2d_3').output)
     pretrained_model_conv5 = Model(base_model3.input, base_model3.get_layer('conv2d_last').output)
     # if config['style_train'] is True:
@@ -108,7 +111,8 @@ def model_style1(base_model_path):
     fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
     drop = Dropout(rate=0.2)(fc_2)
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
-    fc_out = Dense(2, name='fc_out')(fc_3)
+    # fc_out = Dense(config['num_outputs'], name='fc_str')(fc_3)
+    fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
     
     model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
     return model

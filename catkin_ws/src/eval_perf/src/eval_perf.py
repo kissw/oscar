@@ -340,7 +340,7 @@ class MapInfoGenerator:
         print('dist : ' +str(format(self._cal_dist(self.car_pose), ".9f")))
         print('maxvel : ' +str(format(self._cal_maxvel(self.car_velocity), ".9f")))
         print('avrvel : ' +str(format(self._cal_avrvel(self.car_velocity), ".9f")))
-        self._cal_ggdiagram(self.car_velocities, self.car_times)
+        self._cal_ggdiagram(self.car_velocities, self.car_times, self.car_pose)
         error_txt=[]
         error_txt.append('mmdc , ' +str(format(self._cal_mmdc(self.total_error), ".9f")))
         error_txt.append('mddc , ' +str(format(self._cal_mddc(self.total_error_nabs, self.car_times), ".9f")))
@@ -607,7 +607,7 @@ class MapInfoGenerator:
         error_mce /= (num_data - count)
         return error_mce
     
-    def _cal_ggdiagram(self, v, t):
+    def _cal_ggdiagram(self, v, t, p):
         import matplotlib.pyplot as plt
         import pandas as pd
         import numpy as np
@@ -616,6 +616,8 @@ class MapInfoGenerator:
         ay = []
         av_ax_g = []
         av_ay_g = []
+        vx = []
+        px = []
         num_data = len(v) - 1
         av_num = 20 #Simple Moving Average
         count = 0
@@ -633,6 +635,8 @@ class MapInfoGenerator:
                     av_ay = sum(ay) / av_num
                     av_ax_g.append(av_ax/9.8)
                     av_ay_g.append(av_ay/9.8)
+                    px.append(p[i+1][0])
+                    vx.append(v[i+1][0]/25)
                     del ax[0], ay[0]
            
         ##########local frame vel###########
@@ -644,8 +648,11 @@ class MapInfoGenerator:
         plt.ylabel('Ax(g)', fontsize=14)
         plt.ylim([-1.5, 1.5])
         # plt.scatter(range(0, len(ax[:-1])), ax[:-1], s=.1)
-        plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'red', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'Ax-t_Diagram')
+        # plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'red', markersize=1)
+        # plt.plot(range(0, len(vx)), vx,'-', color = 'blue', markersize=1)
+        plt.plot(px, av_ax_g,'-', color = 'red', markersize=1)
+        plt.plot(px, vx,'-', color = 'blue', markersize=1)
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_Ax-t_Diagram')
         
         plt.rcParams["figure.figsize"] = (10,4)
         plt.rcParams['axes.grid'] = True
@@ -656,7 +663,7 @@ class MapInfoGenerator:
         plt.ylim([-1.5, 1.5])
         # plt.scatter(range(0, len(av_ay)), av_ay, s=.1)
         plt.plot(range(0, len(av_ay_g)), av_ay_g,'-', color = 'blue', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'Ay-t_Diagram')
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_Ay-t_Diagram')
         
         # print(ax, ay)
         plt.rcParams['axes.grid'] = True
@@ -675,8 +682,8 @@ class MapInfoGenerator:
         plt.ylabel('Ay(g)', fontsize=14)
         plt.xlim([-1.5, 1.5])
         plt.ylim([-1.5, 1.5])
-        plt.scatter(av_ax_g[500:1500], av_ay_g[500:1500], s=.1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'G-G_Diagram')
+        plt.scatter(av_ax_g, av_ay_g, s=.1)
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_G-G_Diagram')
         
     
     def _savefigs(self, plt, filename):

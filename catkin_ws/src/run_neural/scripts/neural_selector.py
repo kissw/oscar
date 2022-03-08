@@ -35,7 +35,7 @@ config = Config.neural_net
 class NeuralSelector:
     def __init__(self):
         rospy.init_node('neural_selector')
-        self.rate = rospy.Rate(50)
+        self.rate = rospy.Rate(30)
         self.network = 0
         self.nerual1_joy_data = Control()
         self.nerual2_joy_data = Control()

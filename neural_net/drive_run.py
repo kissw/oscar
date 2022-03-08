@@ -47,5 +47,9 @@ class DriveRun:
         throttle /= Config.neural_net['throttle_scale']
         predict[0][0] = steering_angle
         predict[0][1] = throttle
-
+        if Config.neural_net['num_outputs'] == 3:
+            brake = predict[0][2]
+            brake /= Config.neural_net['brake_scale']
+            predict[0][2] = brake
+        # print(brake)
         return predict

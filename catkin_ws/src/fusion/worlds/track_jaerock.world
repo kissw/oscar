@@ -440,16 +440,6 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='Fast Food_0'>
-        <pose frame=''>391.376 203.259 0 0 -0 0</pose>
-        <scale>1 1 1</scale>
-        <link name='link'>
-          <pose frame=''>391.376 203.259 3.15931 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
-        </link>
-      </model>
       <model name='Gas Station'>
         <pose frame=''>230.213 -0.498473 0 0 -0 2.51949</pose>
         <scale>1 1 1</scale>
@@ -7935,55 +7925,6 @@
         <kinematic>0</kinematic>
       </link>
       <pose frame=''>360.831 220.511 0 0 -0 0</pose>
-    </model>
-    <model name='Fast Food_0'>
-      <static>1</static>
-      <link name='link'>
-        <pose frame=''>0 0 3.15931 0 -0 0</pose>
-        <collision name='collision'>
-          <geometry>
-            <mesh>
-              <scale>3 3 2</scale>
-              <uri>model://fast_food/meshes/fast_food.dae</uri>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <geometry>
-            <mesh>
-              <scale>3 3 2</scale>
-              <uri>model://fast_food/meshes/fast_food.dae</uri>
-            </mesh>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://fast_food/materials/scripts</uri>
-              <uri>model://fast_food/materials/textures</uri>
-              <name>FastFood/Diffuse</name>
-            </script>
-            <shader type='normal_map_tangent_space'>
-              <normal_map>FastFood_Normal.png</normal_map>
-            </shader>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose frame=''>393.005 208.058 0 0 -0 0</pose>
     </model>
     <model name='Lamp Post_1'>
       <static>1</static>

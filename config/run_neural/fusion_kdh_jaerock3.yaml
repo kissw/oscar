@@ -7,7 +7,7 @@ version: 0.92
 ## driving strategy - run_neural.py
 
 # max vel
-max_vel: 40
+max_vel: 15
 # steering angle value for sharp turn
 sharp_turn_min: 0.25
 # when sharp turn, apply brake for this sec.
@@ -19,7 +19,7 @@ throttle_default: 1
 # throttle at sharp turn
 throttle_sharp_turn: 0.1
 # velocity threshold for not moving
-velocity_0: 0.03
+velocity_0: 0.0
 
 # lstm
 lstm_dataterm : 1

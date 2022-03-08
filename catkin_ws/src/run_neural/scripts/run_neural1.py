@@ -142,6 +142,11 @@ def main(weight_file_name, base_weight_name=None):
                     # prediction is [ [] ] numpy.ndarray
                     joy_data.steer = prediction[0][0]
                     joy_data.throttle = prediction[0][1]
+                # elif config['num_outputs'] == 3:
+                #     # prediction is [ [] ] numpy.ndarray
+                #     joy_data.steer = prediction[0][0]
+                #     joy_data.throttle = prediction[0][1]
+                #     # joy_data.brake = prediction[0][2]
                 else: # num_outputs is 1
                     joy_data.steer = prediction[0][0]
             else: # num_inputs is 1
@@ -157,7 +162,7 @@ def main(weight_file_name, base_weight_name=None):
             
         #############################
         ## very very simple controller
-        ## 
+        # ## 
         is_sharp_turn = False
         # if brake is not already applied and sharp turn
         if neural_control.braking is False: 
@@ -181,16 +186,16 @@ def main(weight_file_name, base_weight_name=None):
         ##############################    
         ## publish mavros control topic
         joy_pub.publish(joy_data)
-        if Config.data_collection['vehicle_name'] == 'rover':
-            joy_data4mavros = Twist()
-            if neural_control.braking is True:
-                joy_data4mavros.linear.x = 0
-                joy_data4mavros.linear.y = 0
-            else: 
-                joy_data4mavros.linear.x = joy_data.throttle*Config.run_neural['scale_factor_throttle']
-                joy_data4mavros.linear.y = joy_data.steer*Config.run_neural['scale_factor_steering']
+        # if Config.data_collection['vehicle_name'] == 'rover':
+        #     joy_data4mavros = Twist()
+        #     if neural_control.braking is True:
+        #         joy_data4mavros.linear.x = 0
+        #         joy_data4mavros.linear.y = 0
+        #     else: 
+        #         joy_data4mavros.linear.x = joy_data.throttle*Config.run_neural['scale_factor_throttle']
+        #         joy_data4mavros.linear.y = joy_data.steer*Config.run_neural['scale_factor_steering']
 
-            joy_pub4mavros.publish(joy_data4mavros)
+        #     joy_pub4mavros.publish(joy_data4mavros)
 
 
         ## print out
