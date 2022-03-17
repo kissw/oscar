@@ -122,6 +122,7 @@ class DriveTrain:
             timestep_image_names = []
             timestep_measurements = []
             timestep_velocities = []
+            timestep_image_times = []
             for image_name, velocity, measurment in timestep_samples:
                 timestep_image_names.append(image_name)
                 timestep_measurements.append(measurment)
@@ -284,14 +285,14 @@ class DriveTrain:
                         else:
                             measurements_timestep.append(steering_angle*config['steering_angle_scale'])
                 
-                    append, image, steering_angle = _data_augmentation(image, steering_angle)
-                    if append is True:
-                        images_aug_timestep.append(image)
-                        velocities_aug_timestep.append(velocity)
-                        if config['num_outputs'] == 2:                
-                            measurements_aug_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
-                        else:
-                            measurements_aug_timestep.append(steering_angle*config['steering_angle_scale'])
+                        append, image, steering_angle = _data_augmentation(image, steering_angle)
+                        if append is True:
+                            images_aug_timestep.append(image)
+                            velocities_aug_timestep.append(velocity)
+                            if config['num_outputs'] == 2:                
+                                measurements_aug_timestep.append((steering_angle*config['steering_angle_scale'], throttle))
+                            else:
+                                measurements_aug_timestep.append(steering_angle*config['steering_angle_scale'])
 
                 images.append(images_timestep)
                 velocities.append(velocities_timestep)

@@ -588,31 +588,273 @@ def model_pilotnet_lstm_s():
     
     return model
 
-def model_alexnet_t_lstm():
-    
-    img_shape = (None, config['input_image_height'],
+
+def model_bimi_lstm_s():
+    input_shape = (None, config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'])
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb   = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2), activation='relu'), name='conv2d_1')(lamb)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2), activation='relu'), name='conv2d_2')(conv_1)
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2), activation='relu'), name='conv2d_3')(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3), activation='relu'), name='conv2d_4')(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3), activation='relu'), name='conv2d_last')(conv_4)
+    flat   = TimeDistributed(Flatten(), name='flat')(conv_5)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1   = Dense(1000, activation='relu', name='fc_1')(lstm)
+    fc_2   = Dense(100 , activation='relu', name='fc_2')(fc_1)
+    fc_3   = Dense(50 , activation='relu', name='fc_3')(fc_2)
+    fc_4   = Dense(10 , activation='relu', name='fc_4')(fc_3)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_4)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
+def model_bimi_lstm_r():
+    input_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb   = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2), activation='relu'), name='conv2d_1')(lamb)
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2), activation='relu'), name='conv2d_2')(conv_1)
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2), activation='relu'), name='conv2d_3')(conv_2)
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3), activation='relu'), name='conv2d_4')(conv_3)
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3), activation='relu'), name='conv2d_last')(conv_4)
+    flat   = TimeDistributed(Flatten(), name='flat')(conv_5)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1   = Dense(1000, activation='relu', name='fc_1')(lstm)
+    fc_2   = Dense(100 , activation='relu', name='fc_2')(fc_1)
+    fc_3   = Dense(50 , activation='relu', name='fc_3')(fc_2)
+    fc_4   = Dense(10 , activation='relu', name='fc_4')(fc_3)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_4)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
+
+def model_alexnet_lstm_s(): 
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
         
     img_input = Input(shape=img_shape)
-    lamb      = Lambda(lambda x: x/127.5 - 1.0)(img_input)
-    conv_1    = TimeDistributed(Conv2D(16, (3, 3), activation='elu'), name='conv_1')(lamb)
-    conv_1_pl = TimeDistributed(MaxPooling2D(pool_size=(4, 4), strides=(2,2)),  name='maxpool_1')(conv_1)
-    conv_2    = TimeDistributed(Conv2D(32, (3, 3), activation='elu'), name='conv_2')(conv_1_pl)
-    conv_2_pl = TimeDistributed(MaxPooling2D(pool_size=(4, 4), strides=(2,2)), name='maxpool_2')(conv_2)
-    conv_3    = TimeDistributed(Conv2D(64, (3, 3), activation='elu'), name='conv_3')(conv_2_pl)
-    conv_4    = TimeDistributed(Conv2D(64, (3, 3), activation='elu'), name='conv_4')(conv_3)
-    conv_5    = TimeDistributed(Conv2D(64, (3, 3), activation='elu'), name='conv2d_last')(conv_4)
-    conv_5_pl = TimeDistributed(MaxPooling2D(pool_size=(2, 2)), name='maxpool_3')(conv_5)
-    
-    flat = TimeDistributed(Flatten())(conv_5_pl)
-    lstm = LSTM(512, return_sequences=False, dropout=0.2, name='lstm')(flat)
-    fc_1 = Dense(512, activation='elu', name='fc_1')(lstm)
-    fc_2 = Dense(512, activation='elu', name='fc_2')(fc_1)
+    lamb      = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1    = TimeDistributed(Conv2D(96, (11, 11), strides=(4,4), padding="same", activation='relu'), name='conv_1')(lamb)
+    conv_1_bn = TimeDistributed(BatchNormalization())(conv_1)
+    conv_1_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_1')(conv_1_bn)
+    conv_2    = TimeDistributed(Conv2D(256, (5, 5), padding="same", activation='relu'), name='conv_2')(conv_1_pl)
+    conv_2_bn = TimeDistributed(BatchNormalization())(conv_2)
+    conv_2_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_2')(conv_2_bn)
+    conv_3    = TimeDistributed(Conv2D(384, (3, 3), padding="same", activation='relu'), name='conv_3')(conv_2_pl)
+    conv_4    = TimeDistributed(Conv2D(384, (3, 3), padding="same", activation='relu'), name='conv_4')(conv_3)
+    conv_5    = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_5')(conv_4)
+    conv_5_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_3')(conv_5)
+    flat      = TimeDistributed(Flatten())(conv_5_pl)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1 = Dense(4096, activation='relu', name='fc_1')(lstm)
+    fc_2 = Dense(4096, activation='relu', name='fc_2')(fc_1)
     fc_last = Dense(config['num_outputs'], activation='linear', name='fc_str')(fc_2)
     
     model = Model(inputs=img_input, outputs=fc_last)
     
+    return model
+
+
+def model_alexnet_lstm_r(): 
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+        
+    img_input = Input(shape=img_shape)
+    lamb      = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1    = TimeDistributed(Conv2D(96, (11, 11), strides=(4,4), padding="same", activation='relu'), name='conv_1')(lamb)
+    conv_1_bn = TimeDistributed(BatchNormalization())(conv_1)
+    conv_1_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_1')(conv_1_bn)
+    conv_2    = TimeDistributed(Conv2D(256, (5, 5), padding="same", activation='relu'), name='conv_2')(conv_1_pl)
+    conv_2_bn = TimeDistributed(BatchNormalization())(conv_2)
+    conv_2_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_2')(conv_2_bn)
+    conv_3    = TimeDistributed(Conv2D(384, (3, 3), padding="same", activation='relu'), name='conv_3')(conv_2_pl)
+    conv_4    = TimeDistributed(Conv2D(384, (3, 3), padding="same", activation='relu'), name='conv_4')(conv_3)
+    conv_5    = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_5')(conv_4)
+    conv_5_pl = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)), name='maxpool_3')(conv_5)
+    flat      = TimeDistributed(Flatten())(conv_5_pl)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1 = Dense(4096, activation='relu', name='fc_1')(lstm)
+    fc_2 = Dense(4096, activation='relu', name='fc_2')(fc_1)
+    fc_last = Dense(config['num_outputs'], activation='linear', name='fc_str')(fc_2)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+    
+    return model
+
+
+def model_resnet18_lstm_s(): 
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+        
+    img_input = Input(shape=img_shape)
+    lamb        = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1      = TimeDistributed(Conv2D(64, (7, 7), strides=(2,2), padding="same", activation='relu'), name='conv_1')(lamb)
+    conv_1_pl   = TimeDistributed(MaxPooling2D(pool_size=(3, 3), padding="same", strides=(2, 2)), name='maxpool_1')(conv_1)
+    conv_2_1_1  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_1_1')(conv_1_pl)
+    conv_2_1_2  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_1_2')(conv_2_1_1)
+    conc_1      = Add()([conv_1_pl, conv_2_1_2])
+    conv_2_2_1  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_2_1')(conc_1)
+    conv_2_2_2  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_2_2')(conv_2_2_1)
+    conc_2      = Add()([conc_1, conv_2_2_2])
+    conv_3_1_0  = TimeDistributed(Conv2D(128, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_3_1_3')(conc_2)
+    conv_3_1_1  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_1_1')(conv_3_1_0)
+    conv_3_1_2  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_1_2')(conv_3_1_1)
+    conc_3      = Add()([conv_3_1_0, conv_3_1_2])
+    conv_3_2_1  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_2_1')(conc_3)
+    conv_3_2_2  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_2_2')(conv_3_2_1)
+    conc_4      = Add()([conc_3, conv_3_2_2])
+    conv_4_1_0  = TimeDistributed(Conv2D(256, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_4_1_0')(conc_4)
+    conv_4_1_1  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_1_1')(conv_4_1_0)
+    conv_4_1_2  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_1_2')(conv_4_1_1)
+    conc_5      = Add()([conv_4_1_0, conv_4_1_2])
+    conv_4_2_1  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_2_1')(conc_5)
+    conv_4_2_2  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_2_2')(conv_4_2_1)
+    conc_6      = Add()([conc_5, conv_4_2_2])
+    conv_5_1_0  = TimeDistributed(Conv2D(512, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_5_1_0')(conc_6)
+    conv_5_1_1  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_1_1')(conv_5_1_0)
+    conv_5_1_2  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_1_2')(conv_5_1_1)
+    conc_7      = Add()([conv_5_1_0, conv_5_1_2])
+    conv_5_2_1  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_2_1')(conc_7)
+    conv_5_2_2  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_2_2')(conv_5_2_1)
+    conc_8      = Add()([conc_7, conv_5_2_2])
+    conv_5_pl   = TimeDistributed(GlobalAveragePooling2D())(conc_8)
+    # print(conv_5_pl.shape)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(conv_5_pl)
+
+    # flat = Flatten()(conv_5_pl)
+    fc_last = Dense(config['num_outputs'], activation='linear', name='fc_str')(lstm)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+    
+    return model
+
+def model_resnet18_lstm_r(): 
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+        
+    img_input = Input(shape=img_shape)
+    lamb        = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1      = TimeDistributed(Conv2D(64, (7, 7), strides=(2,2), padding="same", activation='relu'), name='conv_1')(lamb)
+    conv_1_pl   = TimeDistributed(MaxPooling2D(pool_size=(3, 3), padding="same", strides=(2, 2)), name='maxpool_1')(conv_1)
+    conv_2_1_1  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_1_1')(conv_1_pl)
+    conv_2_1_2  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_1_2')(conv_2_1_1)
+    conc_1      = Add()([conv_1_pl, conv_2_1_2])
+    conv_2_2_1  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_2_1')(conc_1)
+    conv_2_2_2  = TimeDistributed(Conv2D(64, (3, 3), padding="same", activation='relu'), name='conv_2_2_2')(conv_2_2_1)
+    conc_2      = Add()([conc_1, conv_2_2_2])
+    conv_3_1_0  = TimeDistributed(Conv2D(128, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_3_1_3')(conc_2)
+    conv_3_1_1  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_1_1')(conv_3_1_0)
+    conv_3_1_2  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_1_2')(conv_3_1_1)
+    conc_3      = Add()([conv_3_1_0, conv_3_1_2])
+    conv_3_2_1  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_2_1')(conc_3)
+    conv_3_2_2  = TimeDistributed(Conv2D(128, (3, 3), padding="same", activation='relu'), name='conv_3_2_2')(conv_3_2_1)
+    conc_4      = Add()([conc_3, conv_3_2_2])
+    conv_4_1_0  = TimeDistributed(Conv2D(256, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_4_1_0')(conc_4)
+    conv_4_1_1  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_1_1')(conv_4_1_0)
+    conv_4_1_2  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_1_2')(conv_4_1_1)
+    conc_5      = Add()([conv_4_1_0, conv_4_1_2])
+    conv_4_2_1  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_2_1')(conc_5)
+    conv_4_2_2  = TimeDistributed(Conv2D(256, (3, 3), padding="same", activation='relu'), name='conv_4_2_2')(conv_4_2_1)
+    conc_6      = Add()([conc_5, conv_4_2_2])
+    conv_5_1_0  = TimeDistributed(Conv2D(512, (1, 1), strides=(2,2), padding="same", activation='relu'), name='conv_5_1_0')(conc_6)
+    conv_5_1_1  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_1_1')(conv_5_1_0)
+    conv_5_1_2  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_1_2')(conv_5_1_1)
+    conc_7      = Add()([conv_5_1_0, conv_5_1_2])
+    conv_5_2_1  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_2_1')(conc_7)
+    conv_5_2_2  = TimeDistributed(Conv2D(512, (3, 3), padding="same", activation='relu'), name='conv_5_2_2')(conv_5_2_1)
+    conc_8      = Add()([conc_7, conv_5_2_2])
+    conv_5_pl   = TimeDistributed(GlobalAveragePooling2D())(conc_8)
+    # print(conv_5_pl.shape)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(conv_5_pl)
+
+    # flat = Flatten()(conv_5_pl)
+    fc_last = Dense(config['num_outputs'], activation='linear', name='fc_str')(lstm)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+    
+    return model
+
+
+def model_conjoin_lstm_s(): #
+    from keras.layers import add, Concatenate, ELU, UpSampling2D
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    
+    ######img model#######
+    img_input = Input(shape=img_shape)
+    lamb    = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1  = TimeDistributed(Conv2D(64, (8, 8), strides=(2,2), activation='relu'), name='conv_1')(lamb)
+    conv_2  = TimeDistributed(Conv2D(64, (6, 6), strides=(2,2), activation='relu'), name='conv_2')(conv_1)
+    conv_3_1= TimeDistributed(Conv2D(128, (5, 5), strides=(2,2), padding='same', activation='relu'), name='conv_3_1')(conv_2)
+    conv_3_2= TimeDistributed(Conv2D(128, (3, 3), strides=(2,2), padding='same', activation='relu'), name='conv_3_2')(conv_2)
+    conc_1  = Concatenate(axis=3)([conv_3_1, conv_3_2])
+    conv_4_1= TimeDistributed(Conv2D(256, (3, 3), activation='relu'))(conc_1)
+    conv_4_2= TimeDistributed(Conv2D(256, (3, 3), activation='relu'))(conv_3_2)
+    conc_2  = Concatenate(axis=3)([conv_4_1, conv_4_2])
+    conv_5_1= TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv_5_1')(conc_2)
+    conv_5_2= TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv_5_2')(conv_4_2)
+    conc_3  = Concatenate(axis=3)([conv_5_1, conv_5_2])
+    conv_6  = TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv2d_last')(conc_3)
+    
+    flat  = TimeDistributed(Flatten())(conv_6)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1 = Dense(1000, activation='relu', name='fc_1')(lstm)
+    fc_2 = Dense(100,  activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(50,   activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(1, name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
+def model_conjoin_lstm_r(): #
+    from keras.layers import add, Concatenate, ELU, UpSampling2D
+    img_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    
+    ######img model#######
+    img_input = Input(shape=img_shape)
+    lamb    = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1  = TimeDistributed(Conv2D(64, (8, 8), strides=(2,2), activation='relu'), name='conv_1')(lamb)
+    conv_2  = TimeDistributed(Conv2D(64, (6, 6), strides=(2,2), activation='relu'), name='conv_2')(conv_1)
+    conv_3_1= TimeDistributed(Conv2D(128, (5, 5), strides=(2,2), padding='same', activation='relu'), name='conv_3_1')(conv_2)
+    conv_3_2= TimeDistributed(Conv2D(128, (3, 3), strides=(2,2), padding='same', activation='relu'), name='conv_3_2')(conv_2)
+    conc_1  = Concatenate(axis=3)([conv_3_1, conv_3_2])
+    conv_4_1= TimeDistributed(Conv2D(256, (3, 3), activation='relu'))(conc_1)
+    conv_4_2= TimeDistributed(Conv2D(256, (3, 3), activation='relu'))(conv_3_2)
+    conc_2  = Concatenate(axis=3)([conv_4_1, conv_4_2])
+    conv_5_1= TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv_5_1')(conc_2)
+    conv_5_2= TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv_5_2')(conv_4_2)
+    conc_3  = Concatenate(axis=3)([conv_5_1, conv_5_2])
+    conv_6  = TimeDistributed(Conv2D(512, (3, 3), activation='relu'), name='conv2d_last')(conc_3)
+    
+    flat  = TimeDistributed(Flatten())(conv_6)
+    lstm   = LSTM( 100, return_sequences=False, name='lstm')(flat)
+    fc_1 = Dense(1000, activation='relu', name='fc_1')(lstm)
+    fc_2 = Dense(100,  activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(50,   activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(1, name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
     return model
 
 class NetModel:
@@ -641,7 +883,7 @@ class NetModel:
             self.model = model_pilotnet_r()
         elif config['network_type'] == const.NET_TYPE_PILOT_S:
             self.model = model_pilotnet_s()
-        if config['network_type'] == const.NET_TYPE_BIMI_R:
+        elif config['network_type'] == const.NET_TYPE_BIMI_R:
             self.model = model_bimi_r()
         elif config['network_type'] == const.NET_TYPE_BIMI_S:
             self.model = model_bimi_s()
@@ -674,8 +916,22 @@ class NetModel:
             self.model = model_pilotnet_lstm_r()
         elif config['network_type'] == const.NET_TYPE_PILOTwL_S:
             self.model = model_pilotnet_lstm_s()
-        elif config['network_type'] == const.NET_TYPE_ALEXwL_T:
-            self.model = model_alexnet_t_lstm()
+        elif config['network_type'] == const.NET_TYPE_BIMIwL_R:
+            self.model = model_bimi_lstm_r()
+        elif config['network_type'] == const.NET_TYPE_BIMIwL_S:
+            self.model = model_bimi_lstm_s()
+        elif config['network_type'] == const.NET_TYPE_ALEXwL_R:
+            self.model = model_alexnet_lstm_r()
+        elif config['network_type'] == const.NET_TYPE_ALEXwL_S:
+            self.model = model_alexnet_lstm_s()
+        elif config['network_type'] == const.NET_TYPE_RESwL_R:
+            self.model = model_resnet18_lstm_r()
+        elif config['network_type'] == const.NET_TYPE_RESwL_S:
+            self.model = model_resnet18_lstm_s()
+        elif config['network_type'] == const.NET_TYPE_CONJOINwL_R:
+            self.model = model_conjoin_lstm_r()
+        elif config['network_type'] == const.NET_TYPE_CONJOINwL_S:
+            self.model = model_conjoin_lstm_s()
         else:
             exit('ERROR: Invalid neural network type.')
 
