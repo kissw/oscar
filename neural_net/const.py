@@ -42,6 +42,9 @@ NET_TYPE_ALEXwL_R   = 34
 NET_TYPE_RESwL_R    = 35
 NET_TYPE_CONJOINwL_R= 38
 
+NET_TYPE_PILOT_S_3  = 41
+NET_TYPE_PILOT_S_7  = 42
+NET_TYPE_PILOT_S_9  = 43
 
 # file extension
 DATA_EXT             = '.csv'

@@ -76,6 +76,76 @@ def model_pilotnet_r():
 
     return model
 
+
+def model_pilotnet_s_7():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (7, 7), strides=(2,2), activation='relu', name='conv2d_1')(lamb)
+    conv_2 = Conv2D(36, (7, 7), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(48, (7, 7), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (5, 5), activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (5, 5), activation='relu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
+    fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
+def model_pilotnet_s_3():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (3, 3), strides=(2,2), activation='relu', name='conv2d_1')(lamb)
+    conv_2 = Conv2D(36, (3, 3), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(48, (3, 3), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (3, 3), activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (3, 3), activation='relu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
+    fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
+def model_pilotnet_s_9():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    lamb = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    conv_1 = Conv2D(24, (9, 9), strides=(2,2), activation='relu', name='conv2d_1')(lamb)
+    conv_2 = Conv2D(36, (9, 9), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(48, (9, 9), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (7, 7), activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (7, 7), activation='relu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
+    fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
+    fc_last = Dense(config['num_outputs'], name='fc_str')(fc_3)
+    
+    model = Model(inputs=img_input, outputs=fc_last)
+
+    return model
+
 def model_bimi_s():
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
@@ -883,6 +953,12 @@ class NetModel:
             self.model = model_pilotnet_r()
         elif config['network_type'] == const.NET_TYPE_PILOT_S:
             self.model = model_pilotnet_s()
+        elif config['network_type'] == const.NET_TYPE_PILOT_S_3:
+            self.model = model_pilotnet_s()
+        elif config['network_type'] == const.NET_TYPE_PILOT_S_7:
+            self.model = model_pilotnet_s()
+        elif config['network_type'] == const.NET_TYPE_PILOT_S_9:
+            self.model = model_pilotnet_s()
         elif config['network_type'] == const.NET_TYPE_BIMI_R:
             self.model = model_bimi_r()
         elif config['network_type'] == const.NET_TYPE_BIMI_S:
@@ -911,6 +987,7 @@ class NetModel:
             self.model = model_conjoin_r()
         elif config['network_type'] == const.NET_TYPE_CONJOIN_S:
             self.model = model_conjoin_s()
+            
             
         elif config['network_type'] == const.NET_TYPE_PILOTwL_R:
             self.model = model_pilotnet_lstm_r()
