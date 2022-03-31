@@ -35,7 +35,7 @@ num_epochs: 300
 batch_size: 1
 num_inputs: 1     # input: image, velocity
 num_outputs: 1    # output: steering_angle, throttle
-early_stopping_patience: 20
+early_stopping_patience: 200
 # tensorboard log dir
 tensorboard_log_dir: logs/scalars/
 
