@@ -71,7 +71,7 @@ class MapInfoGenerator:
         self._build_txt(self.oscar_path+"/neural_net/map_info", self.track)
         self._cal_totalerror()
         self._cal_groundtruth(self.oscar_path+"/neural_net/map_info")
-        os.system("rosnode kill " + "eval_perf")
+        os.system("rosnode kill " + "eval_perf" + str(sys.argv[3]))
         
     def _build_txt(self, data_path, data):
         if data_path[-1] != '/':
@@ -685,15 +685,15 @@ class MapInfoGenerator:
         print('Saved ' + filename + '.png & .pdf.')
         
 def main(csv_path, follow_lane):
-    rospy.init_node('eval_perf')
+    rospy.init_node('eval_perf'+str(sys.argv[3]))
     m = MapInfoGenerator(csv_path, follow_lane)
     rospy.spin()
         
         
 if __name__ == '__main__':
     try:
-        if (len(sys.argv) != 3):
-            exit('Usage:\n$ rosrun eval_perf {} csv_path baseline(right, left, center)'.format(sys.argv[0]))
+        if (len(sys.argv) != 4):
+            exit('Usage:\n$ rosrun eval_perf {} csv_path baseline(right, left, center) node_num'.format(sys.argv[0]))
 
         main(sys.argv[1], sys.argv[2])
 

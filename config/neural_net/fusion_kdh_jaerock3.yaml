@@ -10,12 +10,12 @@ version: 0.92
 ## neural network 
 
 # network definition
-network_type: 31       # refer to neural_net/const.py
+network_type: 43       # refer to neural_net/const.py
 gpus: 0
 
 weight_load: False
 
-lstm: True
+lstm: False
 lstm_timestep: 5
 lstm_dataterm: 1
 data_timegap: 3       # seconds
@@ -32,7 +32,7 @@ samples_per_bin: 500
 # data_shuffle: True
 validation_rate: 0.3
 num_epochs: 300
-batch_size: 16
+batch_size: 1
 num_inputs: 1     # input: image, velocity
 num_outputs: 1    # output: steering_angle, throttle
 early_stopping_patience: 20
@@ -44,8 +44,8 @@ data_aug_flip: False
 data_aug_bright: False
 data_aug_shift: False
 # input image size to the neural network
-input_image_width : 370 #160 #370  #160 #270 # 160 # 512
-input_image_height: 70  #160 #70  #160 #90  # 160 # 96
+input_image_width : 160 #370  #270 # 160 # 512
+input_image_height: 160 #70   #90  # 160 # 96
 input_image_depth : 3
 
 # steering data preprocessing
