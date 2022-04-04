@@ -89,8 +89,13 @@ class DriveTrain:
             self.t_data.read()
             self.v_data.read()
             # put velocities regardless we use them or not for simplicity.
-            train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.delta))
-            valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.delta))
+            if config['num_inputs'] == 3:
+                train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.delta))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.delta))
+            else:
+                train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements))
+                
             if config['lstm'] is True:
                 self.train_data,_ = self._prepare_lstm_data(train_samples)
                 self.valid_data,_ = self._prepare_lstm_data(valid_samples)
