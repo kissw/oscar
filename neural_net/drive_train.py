@@ -190,56 +190,109 @@ class DriveTrain:
                 data_path = self.t_data_path
             elif data == 'valid':
                 data_path = self.v_data_path
-            for image_name, velocity, measurement, delta in batch_samples:
-                image_path = data_path + '/' + image_name
-                # print(image_path)
-                image = cv2.imread(image_path)
-                # if collected data is not cropped then crop here
-                # otherwise do not crop.
-                if Config.data_collection['crop'] is not True:
-                    image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
-                                  Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
-                image = cv2.resize(image, 
-                                    (config['input_image_width'],
-                                    config['input_image_height']))
-                image = self.image_process.process(image)
-                # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
-                # if data == 'train':
-                #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
-                # print(image.shape)
-                images.append(image)
-                
-                velocities.append(velocity)
-                deltas.append(delta)
-                # if no brake data in collected data, brake values are dummy
-                steering_angle, throttle, brake = measurement
-                
-                if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
-                    steering_angle = 0
-
-                if config['num_outputs'] == 2:                
-                    measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
-                elif config['num_outputs'] == 3:                
-                    measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
-                else:
-                    measurements.append(steering_angle*config['steering_angle_scale'])
-                    # print("1 : ", steering_angle)
-                
-                # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
-                # data augmentation
-                append, image, steering_angle = _data_augmentation(image, steering_angle)
-                if append is True:
+            if config['num_inputs'] == 2:
+                for image_name, velocity, measurement in batch_samples:
+                    # for image_name, velocity, measurement, delta in batch_samples:
+                    image_path = data_path + '/' + image_name
+                    # print(image_path)
+                    image = cv2.imread(image_path)
+                    # if collected data is not cropped then crop here
+                    # otherwise do not crop.
+                    if Config.data_collection['crop'] is not True:
+                        image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                    Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                    image = cv2.resize(image, 
+                                        (config['input_image_width'],
+                                        config['input_image_height']))
+                    image = self.image_process.process(image)
                     # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                    # if data == 'train':
+                    #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                    # print(image.shape)
                     images.append(image)
+                    
                     velocities.append(velocity)
-                    deltas.append(delta)
+                    # if no brake data in collected data, brake values are dummy
+                    steering_angle, throttle, brake = measurement
+                    
+                    if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
+                        steering_angle = 0
+
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                     elif config['num_outputs'] == 3:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
-            return images, velocities, measurements, deltas
+                        # print("1 : ", steering_angle)
+                    
+                    # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                    # data augmentation
+                    append, image, steering_angle = _data_augmentation(image, steering_angle)
+                    if append is True:
+                        # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                        images.append(image)
+                        velocities.append(velocity)
+                        if config['num_outputs'] == 2:                
+                            measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
+                        elif config['num_outputs'] == 3:                
+                            measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
+                        else:
+                            measurements.append(steering_angle*config['steering_angle_scale'])
+                return images, velocities, measurements
+            
+            elif config['num_inputs'] == 3:
+                for image_name, velocity, measurement, delta in batch_samples:
+                    # for image_name, velocity, measurement, delta in batch_samples:
+                    image_path = data_path + '/' + image_name
+                    # print(image_path)
+                    image = cv2.imread(image_path)
+                    # if collected data is not cropped then crop here
+                    # otherwise do not crop.
+                    if Config.data_collection['crop'] is not True:
+                        image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                    Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                    image = cv2.resize(image, 
+                                        (config['input_image_width'],
+                                        config['input_image_height']))
+                    image = self.image_process.process(image)
+                    # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                    # if data == 'train':
+                    #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                    # print(image.shape)
+                    images.append(image)
+                    
+                    velocities.append(velocity)
+                    deltas.append(delta)
+                    # if no brake data in collected data, brake values are dummy
+                    steering_angle, throttle, brake = measurement
+                    
+                    if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
+                        steering_angle = 0
+
+                    if config['num_outputs'] == 2:                
+                        measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
+                    elif config['num_outputs'] == 3:                
+                        measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
+                    else:
+                        measurements.append(steering_angle*config['steering_angle_scale'])
+                        # print("1 : ", steering_angle)
+                    
+                    # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                    # data augmentation
+                    append, image, steering_angle = _data_augmentation(image, steering_angle)
+                    if append is True:
+                        # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                        images.append(image)
+                        velocities.append(velocity)
+                        deltas.append(delta)
+                        if config['num_outputs'] == 2:                
+                            measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
+                        elif config['num_outputs'] == 3:                
+                            measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
+                        else:
+                            measurements.append(steering_angle*config['steering_angle_scale'])
+                return images, velocities, measurements, deltas
 
         def _prepare_lstm_batch_samples(batch_samples, data=None):
             images = []
@@ -313,7 +366,7 @@ class DriveTrain:
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
 
-                        images, velocities, measurements, steer, thr = _prepare_lstm_batch_samples(batch_samples, data)
+                        images, velocities, measurements, steer, thr, brk = _prepare_lstm_batch_samples(batch_samples, data)
                         
                         if config['num_inputs'] == 1:
                             X_train = np.array(images)
@@ -329,6 +382,12 @@ class DriveTrain:
                             y_train_str = np.array(steer).reshape(-1,1)
                             y_train_thr = np.array(thr).reshape(-1,1)
                             y_train = [y_train_str, y_train_thr]
+                        elif config['num_outputs'] == 3:
+                            # print(y_train_str.shape)
+                            y_train_str = np.array(steer).reshape(-1,1)
+                            y_train_thr = np.array(thr).reshape(-1,1)
+                            y_train_brk = np.array(brk).reshape(-1,1)
+                            y_train = [y_train_str, y_train_thr, y_train_brk]
                         
                         # print(X_train_vel.shape)
                         yield X_train, y_train
@@ -339,22 +398,23 @@ class DriveTrain:
                     for offset in range(0, num_samples, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
                         # print(len(batch_samples))
-                        images, velocities, measurements, delta = _prepare_batch_samples(batch_samples, data)
                         if config['num_inputs'] == 2:
+                            images, velocities, measurements = _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_vel]
                         elif config['num_inputs'] == 3:
+                            images, velocities, measurements, delta = _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train_delta = np.array(delta)
                             X_train = [X_train_str, X_train_vel, X_train_delta]
                         
                         
-                        if config['num_outputs'] == 2:
-                            y_train = np.array(measurements)
-                        elif config['num_outputs'] == 3:
-                            y_train = np.array(measurements)
+                        # if config['num_outputs'] == 2:
+                        #     y_train = np.array(measurements)
+                        # elif config['num_outputs'] == 3:
+                        y_train = np.array(measurements)
                             
                         yield X_train, y_train
                         

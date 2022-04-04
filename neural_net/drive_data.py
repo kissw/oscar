@@ -24,8 +24,9 @@ class DriveData:
                   'linux_time', 
                   'vel', 'vel_x', 'vel_y', 'vel_z',
                   'accel_x', 'accel_y', 
-                  'pos_x', 'pos_y', 'pos_z', 
-                  'delta_steering_angle', 'delta_throttle', 'delta_brake']
+                  'pos_x', 'pos_y', 'pos_z']
+    # , 
+    #               'delta_steering_angle', 'delta_throttle', 'delta_brake']
 
 
     def __init__(self, csv_fname):
@@ -134,9 +135,9 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
-                self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
-                                            float(self.df.loc[i]['delta_throttle']),
-                                            float(self.df.loc[i]['delta_brake'])))
+                # self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
+                #                             float(self.df.loc[i]['delta_throttle']),
+                #                             float(self.df.loc[i]['delta_brake'])))
 
 
     def get_data_path(self):

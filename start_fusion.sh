@@ -18,6 +18,15 @@ elif [ "$1" == "track_test_road" ]; then
 elif [ "$1" == "track_jaerock" ]; then
     echo "Starting with $1..."  # modified DataSpeed track
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_jaerock2" ]; then
+    echo "Starting with $1..."  # modified DataSpeed track
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_jaerock3" ]; then
+    echo "Starting with $1..."  # modified DataSpeed track
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_jaerock4" ]; then
+    echo "Starting with $1..."  # modified DataSpeed track
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
 elif [ "$1" == "track_jaerock_road" ]; then
     echo "Starting with $1..."  # modified DataSpeed track
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
@@ -43,6 +52,12 @@ elif [ "$1" == "track_right" ] ; then
     echo "Starting with $1..." #### experimental
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
 elif [ "$1" == "track_oa_train" ] ; then
+    echo "Starting with $1..." #### experimental
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_straight_2000m" ] ; then
+    echo "Starting with $1..." #### experimental
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_straight_2000m_30mps" ] ; then
     echo "Starting with $1..." #### experimental
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
 else 

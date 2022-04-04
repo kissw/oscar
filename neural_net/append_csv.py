@@ -54,25 +54,26 @@ def append_csv(data_path):
         # check image exists
         bar = ProgressBar()
         for i in bar(range(len(data.df))):
-            if os.path.exists(data_path + data.image_names[i]):
-                new_csv.append(data.image_names[i] + ','
-                            + str(data.measurements[i][0]) + ','
-                            + str(data.measurements[i][1]) + ','
-                            + str(data.measurements[i][2]) + ',' # brake
-                            + str(data.time_stamps[i]) + ','
-                            + str(data.velocities[i]) + ','
-                            + str(data.velocities_xyz[i][0]) + ','
-                            + str(data.velocities_xyz[i][1]) + ','
-                            + str(data.velocities_xyz[i][2]) + ','
-                            + str(data.velocities_xyz[i][3]) + ','
-                            + str(data.velocities_xyz[i][4]) + ','
-                            + str(data.positions_xyz[i][0]) + ','
-                            + str(data.positions_xyz[i][1]) + ','
-                            + str(data.positions_xyz[i][2]) + '\n')
+            # if os.path.exists(data_path + data.image_names[i]):
+            new_csv.append(data.image_names[i] + ','
+                        + str(data.measurements[i][0]) + ','
+                        + str(data.measurements[i][1]) + ','
+                        + str(data.measurements[i][2]) + ',' # brake
+                        + str(data.time_stamps[i]) + ','
+                        + str(data.velocities[i]) + ','
+                        + str(data.velocities_xyz[i][0]) + ','
+                        + str(data.velocities_xyz[i][1]) + ','
+                        + str(data.velocities_xyz[i][2]) + ','
+                        + str(data.velocities_xyz[i][3]) + ','
+                        + str(data.velocities_xyz[i][4]) + ','
+                        + str(data.positions_xyz[i][0]) + ','
+                        + str(data.positions_xyz[i][1]) + ','
+                        + str(data.positions_xyz[i][2]) + '\n')
 
-
+    # print(new_csv)
     # write a new csv
     new_csv_fh = open(data_path + csv_file, 'w')
+    # print(len(new_csv))
     for i in range(len(new_csv)):
         new_csv_fh.write(new_csv[i])
     new_csv_fh.close()
