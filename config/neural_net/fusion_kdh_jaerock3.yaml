@@ -33,7 +33,7 @@ samples_per_bin: 4000
 # training 
 # data_shuffle: True
 validation_rate: 0.3
-num_epochs: 1000
+num_epochs: 10000
 batch_size: 64
 num_inputs: 2     # input: image, velocity
 num_outputs: 3    # output: steering_angle, throttle, brake

@@ -398,9 +398,14 @@ class DriveTrain:
                             y_train = np.array(measurements)
                         elif config['num_outputs'] == 2:
                             # print(y_train_str.shape)
-                            y_train_str = np.array(steer).reshape(-1,1)
-                            y_train_thr = np.array(thr).reshape(-1,1)
-                            y_train = [y_train_str, y_train_thr]
+                            if config['only_thr_brk'] is False:
+                                y_train_str = np.array(steer).reshape(-1,1)
+                                y_train_thr = np.array(thr).reshape(-1,1)
+                                y_train = [y_train_str, y_train_thr]
+                            elif config['only_thr_brk'] is True:
+                                y_train_thr = np.array(thr).reshape(-1,1)
+                                y_train_brk = np.array(brk).reshape(-1,1)
+                                y_train = [y_train_thr, y_train_brk]
                         elif config['num_outputs'] == 3:
                             # print(y_train_str.shape)
                             y_train_str = np.array(steer).reshape(-1,1)
@@ -489,7 +494,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=1)
+                workers=48)
         
     ###########################################################################
     #

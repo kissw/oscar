@@ -121,6 +121,10 @@ def model_style1(base_model_path):
     # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3da790a9ee3a8b9979421d59d460d0efd81903d3
 def model_style2(base_model_path):
 
     input_shape = (config['input_image_height'],
