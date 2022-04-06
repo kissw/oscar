@@ -89,10 +89,9 @@ def model_style1(base_model_path):
     base_model1 = pretrained_pilot(base_model_path)
     base_model2 = pretrained_pilot(base_model_path)
     base_model3 = pretrained_pilot(base_model_path)
-    # pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_str').output)
-    pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_out').output)
-    pretrained_model_conv3 = Model(base_model2.input, base_model2.get_layer('conv2d_3').output)
-    pretrained_model_conv5 = Model(base_model3.input, base_model3.get_layer('conv2d_last').output)
+    pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_out').output, name='base_model_output')
+    pretrained_model_conv3 = Model(base_model2.input, base_model2.get_layer('conv2d_3').output, name='base_model_conv2d_3')
+    pretrained_model_conv5 = Model(base_model3.input, base_model3.get_layer('conv2d_last').output, name='base_model_conv2d_last')
     # if config['style_train'] is True:
     pretrained_model_conv3.trainable = False
     pretrained_model_conv5.trainable = False
@@ -111,12 +110,62 @@ def model_style1(base_model_path):
     fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
     drop = Dropout(rate=0.2)(fc_2)
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
-    # fc_out = Dense(config['num_outputs'], name='fc_str')(fc_3)
-    fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
+    
+    # print(base_model_last_output[0].shape)
+    fc_out = Dense(config['num_outputs']-1, name='fc_str')(fc_3)
+    # fc_str = Dense(1, name='fc_str')(base_str)
+    # fc_thr = Dense(1, name='fc_thr')(fc_3)
+    # fc_brk = Dense(1, name='fc_brk')(fc_3)
     
     model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
+
+def model_style2(base_model_path):
+
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    input_vel = (1,)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    vel_input = Input(shape=input_vel)
     
+    base_model1 = pretrained_pilot(base_model_path)
+    base_model2 = pretrained_pilot(base_model_path)
+    base_model3 = pretrained_pilot(base_model_path)
+    pretrained_model_last = Model(base_model1.input, base_model1.get_layer('fc_out').output, name='base_model_output')
+    pretrained_model_conv3 = Model(base_model2.input, base_model2.get_layer('conv2d_3').output, name='base_model_conv2d_3')
+    pretrained_model_conv5 = Model(base_model3.input, base_model3.get_layer('conv2d_last').output, name='base_model_conv2d_last')
+    # if config['style_train'] is True:
+    pretrained_model_conv3.trainable = False
+    pretrained_model_conv5.trainable = False
+    pretrained_model_last.trainable = False
+        
+    base_model_last_output = pretrained_model_last([img_input, vel_input])
+    base_model_conv3_output = pretrained_model_conv3([img_input, vel_input])
+    base_model_conv5_output = pretrained_model_conv5([img_input, vel_input])
+    
+    add_base_layer = Add()([base_model_conv3_output, base_model_conv5_output])
+    fc_vel = Dense(100, activation='relu', name='fc_vel')(vel_input)
+    fc_base_out = Dense(100, activation='relu', name='fc_base_out')(base_model_last_output)
+    flat = Flatten()(add_base_layer)
+    fc_1 = Dense(500, activation='relu', name='fc_1')(flat)
+    conc = Concatenate()([fc_base_out, fc_1, fc_vel])
+    fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
+    drop = Dropout(rate=0.2)(fc_2)
+    fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
+    
+    # print(base_model_last_output[0].shape)
+    fc_out = Dense(config['num_outputs']-1, name='fc_str')(fc_3)
+    # fc_str = Dense(1, name='fc_str')(base_str)
+    # fc_thr = Dense(1, name='fc_thr')(fc_3)
+    # fc_brk = Dense(1, name='fc_brk')(fc_3)
+    
+    model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
+    return model
+
 def model_nonlstm():
     input_shape = (config['lstm_timestep'], config['input_image_height'],
                     config['input_image_width'],

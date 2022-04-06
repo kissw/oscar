@@ -188,6 +188,9 @@ class DriveTrain:
             images = []
             velocities = []
             measurements = []
+            steers = []
+            throttles = []
+            brakes = []
             deltas = []
             if data is None:
                 data_path = self.data_path
@@ -195,6 +198,7 @@ class DriveTrain:
                 data_path = self.t_data_path
             elif data == 'valid':
                 data_path = self.v_data_path
+                
             if config['num_inputs'] == 2:
                 for image_name, velocity, measurement in batch_samples:
                     # for image_name, velocity, measurement, delta in batch_samples:
@@ -225,8 +229,13 @@ class DriveTrain:
 
                     if config['num_outputs'] == 2:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
-                    elif config['num_outputs'] == 3:                
+                    elif config['num_outputs'] == 3 and config['only_thr_brk'] is False:                
                         measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
+                        # steers.append(steering_angle*config['steering_angle_scale'])
+                        # throttles.append(throttle*config['throttle_scale'])
+                        # brakes.append(brake*config['brake_scale'])
+                    elif config['num_outputs'] == 3 and config['only_thr_brk'] is True:      
+                        measurements.append((throttle*config['throttle_scale'], brake*config['brake_scale']))
                     else:
                         measurements.append(steering_angle*config['steering_angle_scale'])
                         # print("1 : ", steering_angle)
@@ -240,11 +249,16 @@ class DriveTrain:
                         velocities.append(velocity)
                         if config['num_outputs'] == 2:                
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
-                        elif config['num_outputs'] == 3:                
+                        elif config['num_outputs'] == 3 and config['only_thr_brk'] is False:                  
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
+                            # steers.append(steering_angle*config['steering_angle_scale'])
+                            # throttles.append(throttle*config['throttle_scale'])
+                            # brakes.append(brake*config['brake_scale'])
+                        elif config['num_outputs'] == 3 and config['only_thr_brk'] is True:      
+                            measurements.append((throttle*config['throttle_scale'], brake*config['brake_scale']))
                         else:
                             measurements.append(steering_angle*config['steering_angle_scale'])
-                return images, velocities, measurements
+                return images, velocities, measurements #, steers, throttles, brakes
             
             elif config['num_inputs'] == 3:
                 for image_name, velocity, measurement, delta in batch_samples:
@@ -404,7 +418,7 @@ class DriveTrain:
                         batch_samples = samples[offset:offset+batch_size]
                         # print(len(batch_samples))
                         if config['num_inputs'] == 2:
-                            images, velocities, measurements = _prepare_batch_samples(batch_samples, data)
+                            images, velocities, measurements= _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_vel]
@@ -414,7 +428,10 @@ class DriveTrain:
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train_delta = np.array(delta)
                             X_train = [X_train_str, X_train_vel, X_train_delta]
-                        
+                        else:
+                            images, _, measurements = _prepare_batch_samples(batch_samples, data)
+                            X_train = np.array(images)
+                            
                         
                         # if config['num_outputs'] == 2:
                         #     y_train = np.array(measurements)
@@ -472,7 +489,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=12)
+                workers=1)
         
     ###########################################################################
     #

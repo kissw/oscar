@@ -646,13 +646,14 @@ class MapInfoGenerator:
         plt.title('Ax-t diagram', fontsize=20)
         plt.xlabel('t', fontsize=14)
         plt.ylabel('Ax(g)', fontsize=14)
-        plt.ylim([-1.5, 1.5])
+        plt.ylim([-0.3, 0.3])
         # plt.scatter(range(0, len(ax[:-1])), ax[:-1], s=.1)
         # plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'red', markersize=1)
         # plt.plot(range(0, len(vx)), vx,'-', color = 'blue', markersize=1)
-        plt.plot(px, av_ax_g,'-', color = 'red', markersize=1)
-        plt.plot(px, vx,'-', color = 'blue', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_Ax-t_Diagram')
+        # plt.plot(px, av_ax_g,'-', color = 'red', markersize=1)
+        # plt.plot(px, vx,'-', color = 'blue', markersize=1)
+        plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'blue', markersize=1)
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_Ax-t_Diagram')
         
         plt.rcParams["figure.figsize"] = (10,4)
         plt.rcParams['axes.grid'] = True
@@ -660,10 +661,10 @@ class MapInfoGenerator:
         plt.title('Ay-t diagram', fontsize=20)
         plt.xlabel('t', fontsize=14)
         plt.ylabel('Ay(g)', fontsize=14)
-        plt.ylim([-1.5, 1.5])
+        plt.ylim([-0.3, 0.3])
         # plt.scatter(range(0, len(av_ay)), av_ay, s=.1)
         plt.plot(range(0, len(av_ay_g)), av_ay_g,'-', color = 'blue', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_Ay-t_Diagram')
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_Ay-t_Diagram')
         
         # print(ax, ay)
         plt.rcParams['axes.grid'] = True
@@ -672,7 +673,7 @@ class MapInfoGenerator:
         plt.axis('equal')
         _, axes = plt.subplots()
         c_center = (0,0)
-        c_radius = 1
+        c_radius = 0.3
         draw_circle = plt.Circle(c_center, c_radius, fc='w', ec='r', fill=False, linestyle='--')
         axes.set_aspect(1)
         axes.add_artist(draw_circle)
@@ -680,10 +681,10 @@ class MapInfoGenerator:
         plt.title('G-G diagram', fontsize=20)
         plt.xlabel('Ax(g)', fontsize=14)
         plt.ylabel('Ay(g)', fontsize=14)
-        plt.xlim([-1.5, 1.5])
-        plt.ylim([-1.5, 1.5])
-        plt.scatter(av_ax_g, av_ay_g, s=.1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_human_G-G_Diagram')
+        plt.xlim([-0.3, 0.3])
+        plt.ylim([-0.3, 0.3])
+        plt.scatter(av_ax_g, av_ay_g, s=.05)
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_G-G_Diagram')
         
     
     def _savefigs(self, plt, filename):

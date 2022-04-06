@@ -3,7 +3,7 @@
     <gui fullscreen='0'>
       <plugin name='keyboard' filename='libKeyboardGUIPlugin.so'/>
       <camera name='user_camera'>
-        <pose frame=''>-106.723 0.672473 256.841 0 0.626792 -0.070397</pose>
+        <pose frame=''>-201.527 -62.4391 419.604 0 0.626792 -0.070397</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -94,10 +94,10 @@
       </link>
     </model>
     <state world_name='default'>
-      <sim_time>12814 594000000</sim_time>
-      <real_time>237 539972431</real_time>
-      <wall_time>1649061723 856917491</wall_time>
-      <iterations>235569</iterations>
+      <sim_time>13456 243000000</sim_time>
+      <real_time>642 478742870</real_time>
+      <wall_time>1649077588 134528347</wall_time>
+      <iterations>641649</iterations>
       <model name='(DS) Straight Road - 2000m'>
         <pose frame=''>1000 12.2188 0 0 -0 0</pose>
         <scale>1 1 1</scale>
@@ -129,33 +129,33 @@
         </link>
       </model>
       <model name='speed_10'>
-        <pose frame=''>600 -4 0.002229 -0 5e-06 -3.14159</pose>
+        <pose frame=''>600 -4 0.00223 1e-06 5e-06 -3.14159</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>600 -4 0.002229 -0 5e-06 -3.14159</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <pose frame=''>600 -4 0.00223 1e-06 5e-06 -3.14159</pose>
+          <velocity>-0 -1e-06 0.00878 0.0005 -8.3e-05 0</velocity>
+          <acceleration>-0.000516 -0.00226 17.5861 1.01295 -0.232404 3.3e-05</acceleration>
+          <wrench>-0.000516 -0.00226 17.5861 0 -0 0</wrench>
         </link>
       </model>
       <model name='speed_30'>
-        <pose frame=''>10 -4 0.002221 0 5e-06 -3.14158</pose>
+        <pose frame=''>10 -4 0.00223 0 5e-06 -3.14158</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>10 -4 0.002221 0 5e-06 -3.14158</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <pose frame=''>10 -4 0.00223 0 5e-06 -3.14158</pose>
+          <velocity>0 0 0.002838 -0.00014 5.9e-05 0</velocity>
+          <acceleration>0.000311 0.00062 5.63288 -0.277752 0.138871 -1e-06</acceleration>
+          <wrench>0.000311 0.00062 5.63288 0 -0 0</wrench>
         </link>
       </model>
       <model name='speed_30_0'>
-        <pose frame=''>1200 -4 0.002221 1e-06 5e-06 -3.14158</pose>
+        <pose frame=''>900 -4 0.00223 0 4e-06 -3.14158</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>1200 -4 0.002221 1e-06 5e-06 -3.14158</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <pose frame=''>900 -4 0.00223 0 4e-06 -3.14158</pose>
+          <velocity>-0 -1e-06 0.009082 0.000284 -0.000108 -0</velocity>
+          <acceleration>-0.000513 -0.001301 18.1816 0.582844 -0.230027 2.4e-05</acceleration>
+          <wrench>-0.000513 -0.001301 18.1816 0 -0 0</wrench>
         </link>
       </model>
       <light name='sun'>

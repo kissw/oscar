@@ -38,6 +38,7 @@ class DriveRun:
         if Config.neural_net['num_inputs'] == 2:
             velocity = np.array(velocity).reshape(-1, 1)
             predict = self.net_model.model.predict([np_img, velocity])
+            # steer = self.net_model.model.get_layer('fc_')
         else:
             predict = self.net_model.model.predict(np_img)
         # calc scaled steering angle
@@ -51,5 +52,7 @@ class DriveRun:
             brake = predict[0][2]
             brake /= Config.neural_net['brake_scale']
             predict[0][2] = brake
+            
+            
         # print(brake)
         return predict
