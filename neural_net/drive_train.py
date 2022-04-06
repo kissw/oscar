@@ -89,9 +89,12 @@ class DriveTrain:
             self.t_data.read()
             self.v_data.read()
             # put velocities regardless we use them or not for simplicity.
-            if config['num_inputs'] == 3:
+            if config['num_inputs'] == 3 and config['only_thr_brk'] is False:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.delta))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.delta))
+            elif config['only_thr_brk'] is True:
+                train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.goal_velocities))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.goal_velocities))
             else:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements))
@@ -188,9 +191,10 @@ class DriveTrain:
             images = []
             velocities = []
             measurements = []
-            steers = []
-            throttles = []
-            brakes = []
+            goal_velocities = []
+            # steers = []
+            # throttles = []
+            # brakes = []
             deltas = []
             if data is None:
                 data_path = self.data_path
@@ -199,8 +203,8 @@ class DriveTrain:
             elif data == 'valid':
                 data_path = self.v_data_path
                 
-            if config['num_inputs'] == 2:
-                for image_name, velocity, measurement in batch_samples:
+            if config['num_inputs'] == 2 or config['only_thr_brk'] is True:
+                for image_name, velocity, measurement, goal_velocity in batch_samples:
                     # for image_name, velocity, measurement, delta in batch_samples:
                     image_path = data_path + '/' + image_name
                     # print(image_path)
@@ -221,6 +225,7 @@ class DriveTrain:
                     images.append(image)
                     
                     velocities.append(velocity)
+                    goal_velocities.append(goal_velocity)
                     # if no brake data in collected data, brake values are dummy
                     steering_angle, throttle, brake = measurement
                     
@@ -247,6 +252,7 @@ class DriveTrain:
                         # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
                         images.append(image)
                         velocities.append(velocity)
+                        goal_velocities.append(goal_velocity)
                         if config['num_outputs'] == 2:                
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                         elif config['num_outputs'] == 3 and config['only_thr_brk'] is False:                  
@@ -258,7 +264,7 @@ class DriveTrain:
                             measurements.append((throttle*config['throttle_scale'], brake*config['brake_scale']))
                         else:
                             measurements.append(steering_angle*config['steering_angle_scale'])
-                return images, velocities, measurements #, steers, throttles, brakes
+                return images, velocities, measurements, goal_velocities #, steers, throttles, brakes
             
             elif config['num_inputs'] == 3:
                 for image_name, velocity, measurement, delta in batch_samples:
@@ -423,16 +429,23 @@ class DriveTrain:
                         batch_samples = samples[offset:offset+batch_size]
                         # print(len(batch_samples))
                         if config['num_inputs'] == 2:
-                            images, velocities, measurements= _prepare_batch_samples(batch_samples, data)
+                            images, velocities, measurements, _= _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_vel]
-                        elif config['num_inputs'] == 3:
+                        elif config['num_inputs'] == 3 and config['only_thr_brk'] is False:
                             images, velocities, measurements, delta = _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train_delta = np.array(delta)
                             X_train = [X_train_str, X_train_vel, X_train_delta]
+                        elif config['only_thr_brk'] is True:
+                            images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
+                            X_train_str = np.array(images)
+                            X_train_vel = np.array(velocities).reshape(-1, 1)
+                            X_train_gvel = np.array(goal_vel).reshape(-1, 1)
+                            X_train = [X_train_str, X_train_vel, X_train_gvel]
+                            
                         else:
                             images, _, measurements = _prepare_batch_samples(batch_samples, data)
                             X_train = np.array(images)

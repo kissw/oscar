@@ -24,7 +24,8 @@ class DriveData:
                   'linux_time', 
                   'vel', 'vel_x', 'vel_y', 'vel_z',
                   'accel_x', 'accel_y', 
-                  'pos_x', 'pos_y', 'pos_z']
+                  'pos_x', 'pos_y', 'pos_z',
+                  'goal_vel']
     # , 
     #               'delta_steering_angle', 'delta_throttle', 'delta_brake']
 
@@ -36,6 +37,7 @@ class DriveData:
         self.measurements = []
         self.time_stamps = []
         self.velocities = []
+        self.goal_velocities = []
         self.velocities_xyz = []
         self.positions_xyz = []
         self.delta = []
@@ -135,6 +137,7 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
+                self.goal_velocities.append(float(self.df.loc[i]['goal_vel']))
                 # self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
                 #                             float(self.df.loc[i]['delta_throttle']),
                 #                             float(self.df.loc[i]['delta_brake'])))

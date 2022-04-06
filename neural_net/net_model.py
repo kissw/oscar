@@ -82,9 +82,11 @@ def model_style1(base_model_path):
                     config['input_image_width'],
                     config['input_image_depth'],)
     input_vel = (1,)
+    input_gvel = (1,)
     ######model#######
     img_input = Input(shape=input_shape)
     vel_input = Input(shape=input_vel)
+    gvel_input = Input(shape=input_gvel)
     
     base_model1 = pretrained_pilot(base_model_path)
     base_model2 = pretrained_pilot(base_model_path)
@@ -103,10 +105,11 @@ def model_style1(base_model_path):
     
     add_base_layer = Add()([base_model_conv3_output, base_model_conv5_output])
     fc_vel = Dense(100, activation='relu', name='fc_vel')(vel_input)
+    fc_gvel = Dense(100, activation='relu', name='fc_gvel')(gvel_input)
     fc_base_out = Dense(100, activation='relu', name='fc_base_out')(base_model_last_output)
     flat = Flatten()(add_base_layer)
     fc_1 = Dense(500, activation='relu', name='fc_1')(flat)
-    conc = Concatenate()([fc_base_out, fc_1, fc_vel])
+    conc = Concatenate()([fc_base_out, fc_1, fc_vel, fc_gvel])
     fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
     drop = Dropout(rate=0.2)(fc_2)
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
@@ -117,23 +120,21 @@ def model_style1(base_model_path):
     # fc_thr = Dense(1, name='fc_thr')(fc_3)
     # fc_brk = Dense(1, name='fc_brk')(fc_3)
     
-    model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
+    model = Model(inputs=[img_input, vel_input, gvel_input], outputs=[fc_out])
     # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 3da790a9ee3a8b9979421d59d460d0efd81903d3
-def model_style2(base_model_path):
+def model_style1(base_model_path):
 
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
                     config['input_image_depth'],)
     input_vel = (1,)
+    input_gvel = (1,)
     ######model#######
     img_input = Input(shape=input_shape)
     vel_input = Input(shape=input_vel)
+    gvel_input = Input(shape=input_gvel)
     
     base_model1 = pretrained_pilot(base_model_path)
     base_model2 = pretrained_pilot(base_model_path)
@@ -152,10 +153,11 @@ def model_style2(base_model_path):
     
     add_base_layer = Add()([base_model_conv3_output, base_model_conv5_output])
     fc_vel = Dense(100, activation='relu', name='fc_vel')(vel_input)
+    fc_gvel = Dense(100, activation='relu', name='fc_gvel')(gvel_input)
     fc_base_out = Dense(100, activation='relu', name='fc_base_out')(base_model_last_output)
     flat = Flatten()(add_base_layer)
     fc_1 = Dense(500, activation='relu', name='fc_1')(flat)
-    conc = Concatenate()([fc_base_out, fc_1, fc_vel])
+    conc = Concatenate()([fc_base_out, fc_1, fc_vel, fc_gvel])
     fc_2 = Dense(200, activation='relu', name='fc_2')(conc)
     drop = Dropout(rate=0.2)(fc_2)
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
@@ -166,7 +168,7 @@ def model_style2(base_model_path):
     # fc_thr = Dense(1, name='fc_thr')(fc_3)
     # fc_brk = Dense(1, name='fc_brk')(fc_3)
     
-    model = Model(inputs=[img_input, vel_input], outputs=[fc_out])
+    model = Model(inputs=[img_input, vel_input, gvel_input], outputs=[fc_out])
     # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
 
