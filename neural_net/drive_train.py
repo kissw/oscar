@@ -507,7 +507,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=48)
+                workers=24)
         
     ###########################################################################
     #
@@ -550,6 +550,7 @@ class DriveTrain:
         self._prepare_data()
         if config['weight_load'] is True:
             self.net_model.weight_load(load_model_name)
+            # print("done")
         self._build_model(show_summary)
         self._start_training()
         self.net_model.save(self.model_name)

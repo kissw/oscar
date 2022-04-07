@@ -124,7 +124,7 @@ def model_style1(base_model_path):
     # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
 
-def model_style1(base_model_path):
+def model_style2(base_model_path):
 
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
@@ -280,9 +280,9 @@ class NetModel:
     
         from keras.models import model_from_json
 
-        json_string = self.model.to_json()
-        open(load_model_name+'.json', 'w').write(json_string)
-        self.model = model_from_json(open(load_model_name+'.json').read())
+        # json_string = self.model.to_json()
+        # open(load_model_name+'.json', 'w').write(json_string)
+        # self.model = model_from_json(open(load_model_name+'.json').read())
         self.model.load_weights(load_model_name)
         self._compile()
     
