@@ -25,7 +25,7 @@ lstm_lr: 0.0001        #
 
 cnn_lr:  0.0001          # default of Adam is 0.001
 
-decay: 0.0000001        #lstm = 1e-9, cnn = 1e-7 0.00000001
+decay: 0.0000000001        #lstm = 1e-9, cnn = 1e-7 0.00000001
 # normalize data
 data_split: False
 normalize_data: False
@@ -37,8 +37,8 @@ num_epochs: 1
 batch_size: 1
 num_inputs: 3     # input: image, velocity
 num_outputs: 3    # output: steering_angle, throttle, brake
-only_thr_brk: True
-early_stopping_patience: 1000
+only_thr_brk: False
+early_stopping_patience: 20000
 # tensorboard log dir
 tensorboard_log_dir: logs/scalars/
 

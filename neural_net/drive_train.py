@@ -90,8 +90,8 @@ class DriveTrain:
             self.v_data.read()
             # put velocities regardless we use them or not for simplicity.
             if config['num_inputs'] == 3 and config['only_thr_brk'] is False:
-                train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.delta))
-                valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.delta))
+                train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.goal_velocities))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.goal_velocities))
             elif config['only_thr_brk'] is True:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.goal_velocities))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.goal_velocities))
@@ -195,7 +195,7 @@ class DriveTrain:
             # steers = []
             # throttles = []
             # brakes = []
-            deltas = []
+            # deltas = []
             if data is None:
                 data_path = self.data_path
             elif data == 'train':
@@ -225,7 +225,7 @@ class DriveTrain:
                     images.append(image)
                     
                     velocities.append(velocity)
-                    goal_velocities.append(goal_velocity)
+                    goal_velocities.append(goal_velocity-velocity)
                     # if no brake data in collected data, brake values are dummy
                     steering_angle, throttle, brake = measurement
                     
@@ -252,7 +252,7 @@ class DriveTrain:
                         # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
                         images.append(image)
                         velocities.append(velocity)
-                        goal_velocities.append(goal_velocity)
+                        goal_velocities.append(goal_velocity-velocity)
                         if config['num_outputs'] == 2:                
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                         elif config['num_outputs'] == 3 and config['only_thr_brk'] is False:                  
@@ -267,7 +267,7 @@ class DriveTrain:
                 return images, velocities, measurements, goal_velocities #, steers, throttles, brakes
             
             elif config['num_inputs'] == 3:
-                for image_name, velocity, measurement, delta in batch_samples:
+                for image_name, velocity, measurement, goal_velocity in batch_samples:
                     # for image_name, velocity, measurement, delta in batch_samples:
                     image_path = data_path + '/' + image_name
                     # print(image_path)
@@ -288,7 +288,7 @@ class DriveTrain:
                     images.append(image)
                     
                     velocities.append(velocity)
-                    deltas.append(delta)
+                    goal_velocities.append(goal_velocity-velocity)
                     # if no brake data in collected data, brake values are dummy
                     steering_angle, throttle, brake = measurement
                     
@@ -310,14 +310,14 @@ class DriveTrain:
                         # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
                         images.append(image)
                         velocities.append(velocity)
-                        deltas.append(delta)
+                        goal_velocities.append(goal_velocity-velocity)
                         if config['num_outputs'] == 2:                
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale']))
                         elif config['num_outputs'] == 3:                
                             measurements.append((steering_angle*config['steering_angle_scale'], throttle*config['throttle_scale'], brake*config['brake_scale']))
                         else:
                             measurements.append(steering_angle*config['steering_angle_scale'])
-                return images, velocities, measurements, deltas
+                return images, velocities, measurements, goal_velocities
 
         def _prepare_lstm_batch_samples(batch_samples, data=None):
             images = []
@@ -434,11 +434,11 @@ class DriveTrain:
                             X_train_vel = np.array(velocities).reshape(-1, 1)
                             X_train = [X_train_str, X_train_vel]
                         elif config['num_inputs'] == 3 and config['only_thr_brk'] is False:
-                            images, velocities, measurements, delta = _prepare_batch_samples(batch_samples, data)
+                            images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
                             X_train_vel = np.array(velocities).reshape(-1, 1)
-                            X_train_delta = np.array(delta)
-                            X_train = [X_train_str, X_train_vel, X_train_delta]
+                            X_train_gvel = np.array(goal_vel).reshape(-1, 1)
+                            X_train = [X_train_str, X_train_vel, X_train_gvel]
                         elif config['only_thr_brk'] is True:
                             images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
                             X_train_str = np.array(images)
