@@ -290,9 +290,9 @@ class NetModel:
     
         from keras.models import model_from_json
 
-        json_string = self.model.to_json()
-        open(load_model_name+'.json', 'w').write(json_string)
-        self.model = model_from_json(open(load_model_name+'.json').read())
+        # json_string = self.model.to_json()
+        # open(load_model_name+'.json', 'w').write(json_string)
+        # self.model = model_from_json(open(load_model_name+'.json').read())
         self.model.load_weights(load_model_name)
         self._compile()
     
