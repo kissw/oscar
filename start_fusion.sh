@@ -60,6 +60,15 @@ elif [ "$1" == "track_straight_2000m" ] ; then
 elif [ "$1" == "track_straight_2000m_30mps" ] ; then
     echo "Starting with $1..." #### experimental
     roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_straight_10km" ] ; then
+    echo "Starting with $1..." #### experimental
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_curve_right" ] ; then
+    echo "Starting with $1..." #### experimental
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
+elif [ "$1" == "track_curve_left" ] ; then
+    echo "Starting with $1..." #### experimental
+    roslaunch fusion sitl.launch world:=$1 x:=0 y:=0 z:=0.3 R:=0 P:=0 Y:=0
 else 
     echo "Error: no $1.world file exist." 
 fi

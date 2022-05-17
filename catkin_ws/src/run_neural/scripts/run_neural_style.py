@@ -13,7 +13,7 @@ import cv2
 import time
 import rospy
 import numpy as np
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float64
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 import math
@@ -39,6 +39,8 @@ else:
 
 config = Config.neural_net
 velocity = 0.0
+g_steer = 0.0
+goal_velocity = 0.0
 class NeuralControl:
     def __init__(self, weight_file_name, base_weight_name=None):
         rospy.init_node('run_neural')
@@ -56,13 +58,19 @@ class NeuralControl:
         self.term_count = 0
     def _controller_cb(self, image): 
         img = self.ic.imgmsg_to_opencv(image)
-        cropped = img[Config.data_collection['base_image_crop_y1']:Config.data_collection['base_image_crop_y2'],
-                      Config.data_collection['base_image_crop_x1']:Config.data_collection['base_image_crop_x2']]
+        cropped = img[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                      Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+        
+        # base_model_cropped = img[Config.data_collection['base_image_crop_y1']:Config.data_collection['base_image_crop_y2'],
+        #               Config.data_collection['base_image_crop_x1']:Config.data_collection['base_image_crop_x2']]
                       
         img = cv2.resize(cropped, (config['input_image_width'],
                                    config['input_image_height']))
+        # base_model_img = cv2.resize(base_model_cropped, (config['input_image_width'],
+        #                            config['input_image_height']))
                                   
         self.image = self.image_process.process(img)
+        # self.base_model_image = self.image_process.process(base_model_img)
 
         ## this is for CNN-LSTM net models
         if config['lstm'] is True:
@@ -95,13 +103,24 @@ def pos_vel_cb(value):
     vel_z = value.twist.twist.linear.z
     
     velocity = math.sqrt(vel_x**2 + vel_y**2 + vel_z**2)
-        
+    
+def goal_vel_cb(value):
+    global goal_velocity
+
+    goal_velocity = value.data
+
+def steer_cb(value):
+    global g_steer
+    g_steer = value.data
+
 def main(weight_file_name, base_weight_name=None):
 
     # ready for neural network
     neural_control = NeuralControl(weight_file_name, base_weight_name)
     
     rospy.Subscriber(Config.data_collection['base_pose_topic'], Odometry, pos_vel_cb)
+    rospy.Subscriber(Config.data_collection['vehicle_steer_topic'], Float64, steer_cb)
+    rospy.Subscriber(Config.data_collection['goal_velocity'], Float64, goal_vel_cb)
     # ready for /bolt topic publisher
     joy_pub = rospy.Publisher(Config.data_collection['vehicle_control_topic'], Control, queue_size = 10)
     joy_data = Control()
@@ -110,9 +129,10 @@ def main(weight_file_name, base_weight_name=None):
         joy_pub4mavros = rospy.Publisher(Config.config['mavros_cmd_vel_topic'], Twist, queue_size=20)
 
     print('\nStart running. Vroom. Vroom. Vroooooom......')
-    print('steer \tthrt: \tbrake \tvelocity \tHz')
+    print('steer \tthrt: \tbrake \tvel \tgoal_v \tHz')
 
     use_predicted_throttle = True if config['num_outputs'] == 2 else False
+    
     while not rospy.is_shutdown():
 
         if neural_control.image_processed is False:
@@ -121,56 +141,16 @@ def main(weight_file_name, base_weight_name=None):
         start = time.time()
         end = time.time()
         # predicted steering angle from an input image
-        if config['lstm'] is True:
-            if len(neural_control.lstm_image) >= config['lstm_timestep'] :
-                if config['num_inputs'] == 2:
-                    if len(neural_control.lstm_vel) >= config['lstm_timestep']:
-                        prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_vel))
-                        joy_data.steer = prediction[0][0][0]
-                        joy_data.throttle = prediction[0][0][1]
-                elif config['num_inputs'] == 3:
-                    if len(neural_control.lstm_vel) >= config['lstm_timestep']:
-                        prediction = neural_control.drive.run((neural_control.lstm_image, neural_control.lstm_vel))
-                        joy_data.steer = prediction[0][0][0]
-                        joy_data.throttle = prediction[0][0][1]
-                        joy_data.brake = prediction[0][0][2]
-                else : #if config['train_velocity'] is False
-                    start = time.time()
-                    prediction = neural_control.drive.run((neural_control.lstm_image, ))
-                    joy_data.steer = prediction[0][0]
-                    end = time.time() - start
-        
-        else :
-            if config['num_inputs'] == 2:
-                # print(velocity)
-                prediction = neural_control.drive.run((neural_control.image, velocity))
-                if config['num_outputs'] == 2:
+        if config['num_inputs'] == 3:
+            # print(velocity)
+            steer, throttle, brake = neural_control.drive.run((neural_control.image, velocity, float(int(goal_velocity-velocity))))
+            # steer, throttle, brake = neural_control.drive.run((neural_control.image, neural_control.base_model_image, velocity, goal_velocity))
+            if config['only_thr_brk'] is True:
+                if config['num_outputs'] == 3:
                     # prediction is [ [] ] numpy.ndarray
-                    joy_data.steer = prediction[0][0]
-                    joy_data.throttle = prediction[0][1]
-                    joy_data.brake = 0
-                elif config['num_outputs'] == 3:
-                    # prediction is [ [] ] numpy.ndarray
-                    joy_data.steer = prediction[0][0]
-                    joy_data.throttle = prediction[0][1]
-                    joy_data.brake = prediction[0][2]
-                else: # num_outputs is 1
-                    joy_data.steer = prediction[0][0]
-            else: # num_inputs is 1
-                prediction = neural_control.drive.run((neural_control.image, ))
-                if config['num_outputs'] == 2:
-                    # prediction is [ [] ] numpy.ndarray
-                    joy_data.steer = prediction[0][0]
-                    joy_data.throttle = prediction[0][1]
-                elif config['num_outputs'] == 3:
-                    # prediction is [ [] ] numpy.ndarray
-                    joy_data.steer = prediction[0][0]
-                    joy_data.throttle = prediction[0][1]
-                    joy_data.brake = prediction[0][2]
-                else: # num_outputs is 1
-                    joy_data.steer = prediction[0][0]
-                    end = time.time() - start
-                    end = float(1/end)
+                    joy_data.steer = steer
+                    joy_data.throttle = throttle
+                    joy_data.brake = brake
             
         #############################
         ## very very simple controller
@@ -212,8 +192,8 @@ def main(weight_file_name, base_weight_name=None):
 
         ## print out
         # print(joy_data.steer, joy_data.throttle, joy_data.brake, velocity)
-        cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4}\r'.format(joy_data.steer, 
-                        joy_data.throttle, joy_data.brake, velocity, end)
+        cur_output = '{0:.3f} \t{1:.3f} \t{2:.3f} \t{3:.3f} \t{4:.3f} \t{5}\r'.format(joy_data.steer, 
+                        joy_data.throttle, joy_data.brake, velocity, goal_velocity, end)
 
         sys.stdout.write(cur_output)
         sys.stdout.flush()

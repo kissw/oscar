@@ -17,7 +17,7 @@ import time
 import sys
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image, Imu
-from std_msgs.msg import String
+from std_msgs.msg import String, Float64
 #from geometry_msgs.msg import Vector3Stamped
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -44,7 +44,7 @@ class DataCollection():
         self.vel_x = self.vel_y = self.vel_z = 0
         self.accel_x = self.accel_y = 0
         
-        self.vel = 0
+        self.vel = self.goal_vel = 0
         self.pos_x = self.pos_y = self.pos_z = 0
 
         self.img_cvt = ic.ImageConverter()
@@ -99,6 +99,9 @@ class DataCollection():
         self.vel_z = value.twist.twist.linear.z
         self.vel = self.calc_velocity(self.vel_x, self.vel_y, self.vel_z)
 
+    def goal_vel_cb(self, value):
+        self.goal_vel = value.data
+
     def imu_cb(self, value):
         self.accel_x = value.linear_acceleration.x
         # self.accel_y = value.linear_acceleration.y
@@ -125,7 +128,7 @@ class DataCollection():
             cv2.imwrite(file_full_path, img)
         sys.stdout.write(file_full_path + '\r')
         # self.delta_str = self.steering - prev_str
-        line = "{}{},{},{},{},{},{},{},{},{},{},{},{},{},{}\r\n".format(time_stamp, const.IMAGE_EXT, 
+        line = "{}{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\r\n".format(time_stamp, const.IMAGE_EXT, 
                                                     self.steering, 
                                                     self.throttle,
                                                     self.brake,
@@ -138,7 +141,8 @@ class DataCollection():
                                                     self.accel_y,
                                                     self.pos_x,
                                                     self.pos_y,
-                                                    self.pos_z)
+                                                    self.pos_z,
+                                                    self.goal_vel)
         self.text.write(line)
 
 
@@ -148,6 +152,7 @@ def main():
     rospy.init_node('data_collection')
     rospy.Subscriber(config['vehicle_control_topic'], Control, dc.steering_throttle_cb)
     rospy.Subscriber(config['base_pose_topic'], Odometry, dc.pos_vel_cb)
+    rospy.Subscriber(config['goal_velocity'], Float64, dc.goal_vel_cb)
     rospy.Subscriber(config['camera_image_topic'], Image, dc.recorder_cb)
     rospy.Subscriber(config['imu'], Imu, dc.imu_cb)
 

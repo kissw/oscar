@@ -206,10 +206,12 @@ def model_nonlstm():
 class NetModel:
     def __init__(self, model_path, base_model_path=None):
         self.model = None
+        self.base_model = None
         model_name = model_path[model_path.rfind('/'):] # get folder name
         self.name = model_name.strip('/')
 
         self.model_path = model_path
+        self.base_model_path = base_model_path
         #self.config = Config()
 
         # to address the error:
@@ -230,8 +232,10 @@ class NetModel:
             self.model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_STYLE1:
             self.model = model_style1(base_model_path)
+            self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_STYLE2:
             self.model = model_style2(base_model_path)
+            self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_NONLSTM:
             self.model = model_nonlstm()
         else:
@@ -260,6 +264,11 @@ class NetModel:
         self.model.compile(loss=losses.mean_squared_error,
                     optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
                     metrics=['accuracy'])
+        
+        if config['style_run'] is True:
+            self.base_model.compile(loss=losses.mean_squared_error,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
 
 
     ###########################################################################
@@ -291,6 +300,9 @@ class NetModel:
         from keras.models import model_from_json
         # self.model = model_from_json(open(self.model_path+'.json').read())
         self.model.load_weights(self.model_path+'.h5')
+        
+        if config['style_run'] is True:
+            self.base_model.load_weights(self.base_model_path+'.h5')
         self._compile()
 
     ###########################################################################
@@ -298,4 +310,6 @@ class NetModel:
     # show summary
     def summary(self):
         self.model.summary()
+        if config['style_run'] is True:
+            self.base_model.summary()
 
