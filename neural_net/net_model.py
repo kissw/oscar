@@ -115,7 +115,10 @@ def model_style1(base_model_path):
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
     
     # print(base_model_last_output[0].shape)
-    fc_out = Dense(config['num_outputs']-1, name='fc_str')(fc_3)
+    if config['only_thr_brk'] is True: 
+        fc_out = Dense(config['num_outputs']-1, name='fc_out')(fc_3)
+    else:
+        fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
     # fc_str = Dense(1, name='fc_str')(base_str)
     # fc_thr = Dense(1, name='fc_thr')(fc_3)
     # fc_brk = Dense(1, name='fc_brk')(fc_3)
@@ -124,7 +127,7 @@ def model_style1(base_model_path):
     # model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr, fc_brk])
     return model
 
-def model_style1(base_model_path):
+def model_style2(base_model_path):
 
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
@@ -163,7 +166,10 @@ def model_style1(base_model_path):
     fc_3 = Dense(100, activation='relu', name='fc_3')(drop)
     
     # print(base_model_last_output[0].shape)
-    fc_out = Dense(config['num_outputs']-1, name='fc_str')(fc_3)
+    if config['only_thr_brk'] is True: 
+        fc_out = Dense(config['num_outputs']-1, name='fc_out')(fc_3)
+    else:
+        fc_out = Dense(config['num_outputs'], name='fc_out')(fc_3)
     # fc_str = Dense(1, name='fc_str')(base_str)
     # fc_thr = Dense(1, name='fc_thr')(fc_3)
     # fc_brk = Dense(1, name='fc_brk')(fc_3)
@@ -231,6 +237,10 @@ class NetModel:
         elif config['network_type'] == const.NET_TYPE_STYLE1:
             self.model = model_style1(base_model_path)
         elif config['network_type'] == const.NET_TYPE_STYLE2:
+            self.model = model_style2(base_model_path)
+        elif config['network_type'] == const.NET_TYPE_STYLE3:
+            self.model = model_style1(base_model_path)
+        elif config['network_type'] == const.NET_TYPE_STYLE4:
             self.model = model_style2(base_model_path)
         elif config['network_type'] == const.NET_TYPE_NONLSTM:
             self.model = model_nonlstm()
