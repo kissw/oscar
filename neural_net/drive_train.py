@@ -118,7 +118,6 @@ class DriveTrain:
         print('Train samples: ', self.num_train_samples)
         print('Valid samples: ', self.num_valid_samples)
     
-                                          
     ###########################################################################
     # group the samples by the number of timesteps
     def _prepare_lstm_data(self, samples):
