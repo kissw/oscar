@@ -25,7 +25,7 @@ class DriveData:
                   'vel', 'vel_x', 'vel_y', 'vel_z',
                   'accel_x', 'accel_y', 
                   'pos_x', 'pos_y', 'pos_z',
-                  'goal_vel']
+                  'segimg_fname']
     # , 
     #               'delta_steering_angle', 'delta_throttle', 'delta_brake']
 
@@ -37,10 +37,11 @@ class DriveData:
         self.measurements = []
         self.time_stamps = []
         self.velocities = []
-        self.goal_velocities = []
+        # self.goal_velocities = []
         self.velocities_xyz = []
         self.positions_xyz = []
-        self.delta = []
+        self.segimg_names = []
+        # self.delta = []
         
     def read(self, read = True, show_statistics = True, normalize = True):
         self.df = pd.read_csv(self.csv_fname, names=self.csv_header, index_col=False)
@@ -137,7 +138,9 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
-                self.goal_velocities.append(float(self.df.loc[i]['goal_vel']))
+                # self.goal_velocities.append(float(self.df.loc[i]['goal_vel']))
+                if self.df.loc[i]['segimg_fname'] is not None:
+                    self.segimg_names.append(self.df.loc[i]['segimg_fname'])
                 # self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
                 #                             float(self.df.loc[i]['delta_throttle']),
                 #                             float(self.df.loc[i]['delta_brake'])))

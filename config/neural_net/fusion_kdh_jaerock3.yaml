@@ -10,12 +10,13 @@ version: 0.92
 ## neural network 
 
 # network definition
-network_type: 3       # refer to neural_net/const.py
+network_type: 100       # refer to neural_net/const.py
 gpus: 1
 
-weight_load: True
+weight_load: False
 
-style_train: True
+latent: True
+style_train: False
 style_run: False
 lstm: False
 lstm_timestep: 5
@@ -35,8 +36,8 @@ samples_per_bin: 4000
 validation_rate: 0.3
 num_epochs: 50000
 batch_size: 64
-num_inputs: 3     # input: image, velocity
-num_outputs: 3    # output: steering_angle, throttle, brake
+num_inputs: 1     # input: image, velocity
+num_outputs: 1    # output: steering_angle, throttle, brake
 only_thr_brk: False
 early_stopping_patience: 20000
 # tensorboard log dir
@@ -44,7 +45,7 @@ tensorboard_log_dir: logs/scalars/
 
 # data augmentation
 data_aug_flip: False
-data_aug_bright: True
+data_aug_bright: False
 data_aug_shift: False
 # input image size to the neural network
 input_image_width : 160 #160 #270 # 160 # 512

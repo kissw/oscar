@@ -80,6 +80,9 @@ class DriveTrain:
             self.data.read()
             # put velocities regardless we use them or not for simplicity.
             samples = list(zip(self.data.image_names, self.data.velocities, self.data.measurements))
+            # if config['latent'] is True:
+            #     samples = list(zip(self.data.image_names, self.data.segimg_names))
+            
             if config['lstm'] is True:
                 self.train_data, self.valid_data = self._prepare_lstm_data(samples)
             else:    
@@ -95,6 +98,9 @@ class DriveTrain:
             elif config['only_thr_brk'] is True:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements, self.t_data.goal_velocities))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements, self.v_data.goal_velocities))
+            elif config['latent'] is True:
+                train_samples = list(zip(self.t_data.image_names, self.t_data.segimg_names))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.segimg_names))
             else:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements))
@@ -383,80 +389,144 @@ class DriveTrain:
                 thr.append(thr_timestep)
                 
             return images, velocities, measurements, steer, thr
-        
+
+
+        def _prepare_latent_batch_samples(batch_samples, data=None):
+            images = []
+            segimgs = []
+            # steers = []
+            # throttles = []
+            # brakes = []
+            # deltas = []
+            if data is None:
+                data_path = self.data_path
+            elif data == 'train':
+                data_path = self.t_data_path
+            elif data == 'valid':
+                data_path = self.v_data_path
+                
+            for image_name, segimg_name in batch_samples:
+                # for image_name, velocity, measurement, delta in batch_samples:
+
+                # print("hi")
+                image_path = data_path + '/' + image_name
+                # print(image_path)
+                # print(data_path + '/seg/' + str(segimg_name))
+                segimg_path = data_path + '/seg/' + segimg_name
+
+                # print("hi2")
+                # print(image_path)
+                image = cv2.imread(image_path)
+                segimg = cv2.imread(segimg_path)
+                # if collected data is not cropped then crop here
+                # otherwise do not crop.
+                if Config.data_collection['crop'] is not True:
+                    image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                image = cv2.resize(image, 
+                                    (config['input_image_width'],
+                                    config['input_image_height']))
+                image = self.image_process.process(image)
+                # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                # if data == 'train':
+                #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                # print(image.shape)
+                images.append(image)
+                segimgs.append(segimg)
+
+
+            return images, segimgs
+
+
         def _generator(samples, batch_size=config['batch_size'], data=None):
             num_samples = len(samples)
             while True: # Loop forever so the generator never terminates
-                if config['lstm'] is True:
+                if config['latent'] is True:
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
+                        # print("hi")
 
-                        images, velocities, measurements, steer, thr, brk = _prepare_lstm_batch_samples(batch_samples, data)
-                        
-                        if config['num_inputs'] == 1:
-                            X_train = np.array(images)
-                        elif config['num_inputs'] == 2:
-                            X_train = np.array(images)
-                            X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
-                            X_train = [X_train, X_train_vel]
-                            
-                        if config['num_outputs'] == 1:
-                            y_train = np.array(measurements)
-                        elif config['num_outputs'] == 2:
-                            # print(y_train_str.shape)
-                            if config['only_thr_brk'] is False:
-                                y_train_str = np.array(steer).reshape(-1,1)
-                                y_train_thr = np.array(thr).reshape(-1,1)
-                                y_train = [y_train_str, y_train_thr]
-                            elif config['only_thr_brk'] is True:
-                                y_train_thr = np.array(thr).reshape(-1,1)
-                                y_train_brk = np.array(brk).reshape(-1,1)
-                                y_train = [y_train_thr, y_train_brk]
-                        elif config['num_outputs'] == 3:
-                            # print(y_train_str.shape)
-                            y_train_str = np.array(steer).reshape(-1,1)
-                            y_train_thr = np.array(thr).reshape(-1,1)
-                            y_train_brk = np.array(brk).reshape(-1,1)
-                            y_train = [y_train_str, y_train_thr, y_train_brk]
+                        images, segimg = _prepare_latent_batch_samples(batch_samples, data)
+                        # print("hi")
+                        # if config['num_inputs'] == 1:
+                        X_train = np.array(images)
+                        # if config['num_outputs'] == 1:
+                        y_train = np.array(segimg)
                         
                         # print(X_train_vel.shape)
+                        # print(y_train.shape)
                         yield X_train, y_train
-                        
-                else: 
-                    samples = sklearn.utils.shuffle(samples)
+                else:
+                    if config['lstm'] is True:
+                        for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
+                            batch_samples = samples[offset:offset+batch_size]
 
-                    for offset in range(0, num_samples, batch_size):
-                        batch_samples = samples[offset:offset+batch_size]
-                        # print(len(batch_samples))
-                        if config['num_inputs'] == 2:
-                            images, velocities, measurements, _= _prepare_batch_samples(batch_samples, data)
-                            X_train_str = np.array(images)
-                            X_train_vel = np.array(velocities).reshape(-1, 1)
-                            X_train = [X_train_str, X_train_vel]
-                        elif config['num_inputs'] == 3 and config['only_thr_brk'] is False:
-                            images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
-                            X_train_str = np.array(images)
-                            X_train_vel = np.array(velocities).reshape(-1, 1)
-                            X_train_gvel = np.array(goal_vel).reshape(-1, 1)
-                            X_train = [X_train_str, X_train_vel, X_train_gvel]
-                        elif config['only_thr_brk'] is True:
-                            images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
-                            X_train_str = np.array(images)
-                            X_train_vel = np.array(velocities).reshape(-1, 1)
-                            X_train_gvel = np.array(goal_vel).reshape(-1, 1)
-                            X_train = [X_train_str, X_train_vel, X_train_gvel]
+                            images, velocities, measurements, steer, thr, brk = _prepare_lstm_batch_samples(batch_samples, data)
                             
-                        else:
-                            images, _, measurements = _prepare_batch_samples(batch_samples, data)
-                            X_train = np.array(images)
+                            if config['num_inputs'] == 1:
+                                X_train = np.array(images)
+                            elif config['num_inputs'] == 2:
+                                X_train = np.array(images)
+                                X_train_vel = np.array(velocities).reshape(-1,config['lstm_timestep'],1)
+                                X_train = [X_train, X_train_vel]
+                                
+                            if config['num_outputs'] == 1:
+                                y_train = np.array(measurements)
+                            elif config['num_outputs'] == 2:
+                                # print(y_train_str.shape)
+                                if config['only_thr_brk'] is False:
+                                    y_train_str = np.array(steer).reshape(-1,1)
+                                    y_train_thr = np.array(thr).reshape(-1,1)
+                                    y_train = [y_train_str, y_train_thr]
+                                elif config['only_thr_brk'] is True:
+                                    y_train_thr = np.array(thr).reshape(-1,1)
+                                    y_train_brk = np.array(brk).reshape(-1,1)
+                                    y_train = [y_train_thr, y_train_brk]
+                            elif config['num_outputs'] == 3:
+                                # print(y_train_str.shape)
+                                y_train_str = np.array(steer).reshape(-1,1)
+                                y_train_thr = np.array(thr).reshape(-1,1)
+                                y_train_brk = np.array(brk).reshape(-1,1)
+                                y_train = [y_train_str, y_train_thr, y_train_brk]
                             
-                        
-                        # if config['num_outputs'] == 2:
-                        #     y_train = np.array(measurements)
-                        # elif config['num_outputs'] == 3:
-                        y_train = np.array(measurements)
+                            # print(X_train_vel.shape)
+                            yield X_train, y_train
                             
-                        yield X_train, y_train
+                    else: 
+                        samples = sklearn.utils.shuffle(samples)
+
+                        for offset in range(0, num_samples, batch_size):
+                            batch_samples = samples[offset:offset+batch_size]
+                            # print(len(batch_samples))
+                            if config['num_inputs'] == 2:
+                                images, velocities, measurements, _= _prepare_batch_samples(batch_samples, data)
+                                X_train_str = np.array(images)
+                                X_train_vel = np.array(velocities).reshape(-1, 1)
+                                X_train = [X_train_str, X_train_vel]
+                            elif config['num_inputs'] == 3 and config['only_thr_brk'] is False:
+                                images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
+                                X_train_str = np.array(images)
+                                X_train_vel = np.array(velocities).reshape(-1, 1)
+                                X_train_gvel = np.array(goal_vel).reshape(-1, 1)
+                                X_train = [X_train_str, X_train_vel, X_train_gvel]
+                            elif config['only_thr_brk'] is True:
+                                images, velocities, measurements, goal_vel = _prepare_batch_samples(batch_samples, data)
+                                X_train_str = np.array(images)
+                                X_train_vel = np.array(velocities).reshape(-1, 1)
+                                X_train_gvel = np.array(goal_vel).reshape(-1, 1)
+                                X_train = [X_train_str, X_train_vel, X_train_gvel]
+                                
+                            else:
+                                images, _, measurements = _prepare_batch_samples(batch_samples, data)
+                                X_train = np.array(images)
+                                
+                            
+                            # if config['num_outputs'] == 2:
+                            #     y_train = np.array(measurements)
+                            # elif config['num_outputs'] == 3:
+                            y_train = np.array(measurements)
+                                
+                            yield X_train, y_train
                         
         if config['data_split'] is True:
             self.train_generator = _generator(self.train_data)

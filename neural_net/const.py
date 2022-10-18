@@ -17,6 +17,7 @@ NET_TYPE_STYLE1     = 2
 NET_TYPE_STYLE2     = 3
 NET_TYPE_STYLE3     = 12
 NET_TYPE_STYLE4     = 13
+NET_TYPE_BIMI_LATENT= 100
 # NET_TYPE_NONLSTM    = 4
 # file extension
 DATA_EXT             = '.csv'
