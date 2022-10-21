@@ -71,47 +71,58 @@ def main(data_path):
         img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         img_mask = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
         img_result = cv2.bitwise_and(image, image, mask=img_mask)
+        (h,s,v) = cv2.split(img_result)
+        v[:] = 100
+        img = cv2.merge((v, v, s))
+        rgb = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+        # img_gray = cv2.cvtColor(img_result, cv2.COLOR_HSV2GRAY)
+        # img_result = cv2.bitwise_or(gray,gray)
+        # if img_result[:]
+        maxval = 255
+        thresh = 25
+        _, thresh1 = cv2.threshold(gray, thresh, maxval, cv2.THRESH_BINARY)
+        cv2.imwrite(data_path + 'seg/' + data.df.loc[i]['image_fname'][:-4] + '_latent' + const.IMAGE_EXT, thresh1)
+        # break
+        # segimg_names.append(str(data.df.loc[i]['image_fname'][:-4] + '_latent' + const.IMAGE_EXT))
 
-        cv2.imwrite(data_path + 'seg/' + data.df.loc[i]['image_fname'][:-4] + '_latent' + const.IMAGE_EXT, img_result)
-        segimg_names.append(str(data.df.loc[i]['image_fname'][:-4] + '_latent' + const.IMAGE_EXT))
+    # new_csv = []
+    # bar = ProgressBar()
+    # for i in bar(range(len(data.df))):
+    #     if os.path.exists(data_path + data.image_names[i]):
+    #         if Config.data_collection['brake'] is True:
+    #             new_csv.append(data.image_names[i] + ','
+    #                         + str(data.measurements[i][0]) + ','
+    #                         + str(data.measurements[i][1]) + ','
+    #                         + str(data.measurements[i][2]) + ',' # brake
+    #                         + str(data.time_stamps[i]) + ','
+    #                         + str(data.velocities[i]) + ','
+    #                         + str(data.velocities_xyz[i][0]) + ','
+    #                         + str(data.velocities_xyz[i][1]) + ','
+    #                         + str(data.velocities_xyz[i][2]) + ','
+    #                         + str(data.positions_xyz[i][0]) + ','
+    #                         + str(data.positions_xyz[i][1]) + ','
+    #                         + str(data.positions_xyz[i][2]) + ','
+    #                         + str(segimg_names[i]) + '\n')
+    #         else:
+    #             new_csv.append(data.image_names[i] + ','
+    #                         + str(data.measurements[i][0]) + ','
+    #                         + str(data.measurements[i][1]) + ','
+    #                         + str(data.time_stamps[i]) + ','
+    #                         + str(data.velocities[i]) + ','
+    #                         + str(data.velocities_xyz[i][0]) + ','
+    #                         + str(data.velocities_xyz[i][1]) + ','
+    #                         + str(data.velocities_xyz[i][2]) + ','
+    #                         + str(data.positions_xyz[i][0]) + ','
+    #                         + str(data.positions_xyz[i][1]) + ','
+    #                         + str(data.positions_xyz[i][2]) + ','
+    #                         + str(segimg_names[i]) + '\n')
 
-    new_csv = []
-    bar = ProgressBar()
-    for i in bar(range(len(data.df))):
-        if os.path.exists(data_path + data.image_names[i]):
-            if Config.data_collection['brake'] is True:
-                new_csv.append(data.image_names[i] + ','
-                            + str(data.measurements[i][0]) + ','
-                            + str(data.measurements[i][1]) + ','
-                            + str(data.measurements[i][2]) + ',' # brake
-                            + str(data.time_stamps[i]) + ','
-                            + str(data.velocities[i]) + ','
-                            + str(data.velocities_xyz[i][0]) + ','
-                            + str(data.velocities_xyz[i][1]) + ','
-                            + str(data.velocities_xyz[i][2]) + ','
-                            + str(data.positions_xyz[i][0]) + ','
-                            + str(data.positions_xyz[i][1]) + ','
-                            + str(data.positions_xyz[i][2]) + ','
-                            + str(segimg_names[i]) + '\n')
-            else:
-                new_csv.append(data.image_names[i] + ','
-                            + str(data.measurements[i][0]) + ','
-                            + str(data.measurements[i][1]) + ','
-                            + str(data.time_stamps[i]) + ','
-                            + str(data.velocities[i]) + ','
-                            + str(data.velocities_xyz[i][0]) + ','
-                            + str(data.velocities_xyz[i][1]) + ','
-                            + str(data.velocities_xyz[i][2]) + ','
-                            + str(data.positions_xyz[i][0]) + ','
-                            + str(data.positions_xyz[i][1]) + ','
-                            + str(data.positions_xyz[i][2]) + ','
-                            + str(segimg_names[i]) + '\n')
-
-    # write a new csv
-    new_csv_fh = open(data_path + folder_name + '_latent' + const.DATA_EXT, 'w')
-    for i in range(len(new_csv)):
-        new_csv_fh.write(new_csv[i])
-    new_csv_fh.close()
+    # # write a new csv
+    # new_csv_fh = open(data_path + folder_name + '_latent' + const.DATA_EXT, 'w')
+    # for i in range(len(new_csv)):
+    #     new_csv_fh.write(new_csv[i])
+    # new_csv_fh.close()
 
 ###############################################################################
 #       

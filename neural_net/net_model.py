@@ -27,93 +27,6 @@ from config import Config
 config = Config.neural_net
 config_rn = Config.run_neural
 
-def sampling(args):
-    """Reparameterization trick by sampling 
-        fr an isotropic unit Gaussian.
-    # Arguments:
-        args (tensor): mean and log of variance of Q(z|X)
-    # Returns:
-        z (tensor): sampled latent vector
-    """
-
-    z_mean, z_log_var = args
-    batch = K.shape(z_mean)[0]
-    dim = K.int_shape(z_mean)[1]
-    # by default, random_normal has mean=0 and std=1.0
-    epsilon = K.random_normal(shape=(batch, dim))
-    return z_mean + K.exp(0.5 * z_log_var) * epsilon
-
-def model_biminet_latent():
-    input_shape = (config['input_image_height'],
-                    config['input_image_width'],
-                    config['input_image_depth'],)
-    ######model#######
-    img_input = Input(shape=input_shape)
-    
-    lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
-    
-    # encoder
-    conv_1 = Conv2D(24, (5, 5), padding='same', activation='relu', name='conv2d_1')(lamb_str)
-    # print(conv_1.shape)
-    pool_1 = MaxPooling2D(pool_size=(2, 2), name='pool2d_1')(conv_1)
-    # print(pool_1.shape)
-
-    conv_2 = Conv2D(36, (5, 5), padding='same', activation='relu', name='conv2d_2')(pool_1)
-    # print(conv_2.shape)
-    pool_2 = MaxPooling2D(pool_size=(2, 2), name='pool2d_2')(conv_2)
-    # print(pool_2.shape)
-
-    conv_3 = Conv2D(48, (5, 5), padding='same', activation='relu', name='conv2d_3')(pool_2)
-    # print(conv_3.shape)
-    conv_4 = Conv2D(64, (3, 3), padding='same', activation='relu', name='conv2d_4')(conv_3)
-    # print(conv_4.shape)
-    conv_5 = Conv2D(64, (3, 3), padding='same', activation='relu', name='conv2d_5')(conv_4)
-    # print(conv_5.shape)
-
-    # latent = Flatten()(conv_5)
-    # z_mean = Dense(1, activation='relu', name='z_mean')(conv_5)
-    # z_log_var = Dense(1, activation='relu', name='z_log_var')(conv_5)
-
-    # z = Lambda(sampling,
-    #        output_shape=(latent_dim,), 
-    #        name='z')([z_mean, z_log_var])
-
-
-    # decoder
-    conv_6 = Conv2D(64, (3, 3), padding='same', activation='relu', name='conv2d_6')(conv_5)
-    # print(conv_6.shape)
-    conv_7 = Conv2D(64, (3, 3), padding='same', activation='relu', name='conv2d_7')(conv_6)
-    # print(conv_7.shape)
-    conc_1 = concatenate([conv_7, conv_4])
-    # print(conc_1.shape)
-    conv_8 = Conv2D(48, (5, 5), padding='same', activation='relu', name='conv2d_8')(conc_1)
-    # print(conv_8.shape)
-    conc_2 = concatenate([conv_8, conv_3])
-    # print(conc_2.shape)
-
-    upsm_1 = UpSampling2D(size = (2,2), name='upsm2d_1')(conc_2)
-    # print(upsm_1.shape)
-    conv_9 = Conv2D(36, (5, 5), padding='same', activation='relu', name='conv2d_9')(upsm_1)
-    # print(conv_9.shape)
-    conc_3 = concatenate([conv_9, conv_2])
-
-    upsm_2 = UpSampling2D(size = (2,2), name='upsm2d_2')(conc_3)
-    conv_10 = Conv2D(24, (5, 5), padding='same', activation='relu', name='conv2d_10')(upsm_2)
-    conc_4 = concatenate([conv_10, conv_1])
-
-    conv_11 = Conv2D(3, (1, 1), activation='relu', name='conv2d_11')(conc_4)
-
-    # fc_1 = Dense(1000, activation='relu', name='fc_1')(flat)
-    # fc_2 = Dense(100 , activation='relu', name='fc_2')(fc_1)
-    # fc_3 = Dense(50 , activation='relu', name='fc_3')(fc_2)
-    # fc_4 = Dense(10 , activation='relu', name='fc_3')(fc_3)
-    # fc_out = Dense(config['num_outputs'], name='fc_out')(fc_4)
-    
-    model = Model(inputs=[img_input], outputs=[conv_11])
-    # model = Model(inputs=[img_input], outputs=[conv_11, z])
-    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
-    return model
-
 def model_pilotnet():
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
@@ -295,6 +208,107 @@ def model_nonlstm():
     model = Model(inputs=[img_input, vel_input], outputs=[fc_str, fc_thr])
     return model
     
+def sampling(args):
+    """Reparameterization trick by sampling 
+        fr an isotropic unit Gaussian.
+    # Arguments:
+        args (tensor): mean and log of variance of Q(z|X)
+    # Returns:
+        z (tensor): sampled latent vector
+    """
+
+    z_mean, z_log_var = args
+    batch = K.shape(z_mean)[0]
+    dim = K.int_shape(z_mean)[1]
+    # by default, random_normal has mean=0 and std=1.0
+    epsilon = K.random_normal(shape=(batch, dim))
+    return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
+def model_biminet_latent():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    
+    lamb_str = Lambda(lambda x: x)(img_input)
+    
+    # encoder
+    conv_1 = Conv2D(24, (5, 5), padding='same', activation='elu', name='conv2d_1')(lamb_str)
+    conv_1 = BatchNormalization()(conv_1)
+    conv_1 = Activation('elu')(conv_1)
+    pool_1 = MaxPooling2D(pool_size=(2, 2), name='pool2d_1')(conv_1)
+
+    conv_2 = Conv2D(36, (5, 5), padding='same', activation='elu', name='conv2d_2')(pool_1)
+    conv_2 = BatchNormalization()(conv_2)
+    conv_2 = Activation('elu')(conv_2)
+    pool_2 = MaxPooling2D(pool_size=(2, 2), name='pool2d_2')(conv_2)
+
+    conv_3 = Conv2D(48, (5, 5), padding='same', activation='elu', name='conv2d_3')(pool_2)
+    conv_3 = BatchNormalization()(conv_3)
+    conv_3 = Activation('elu')(conv_3)
+
+    conv_4 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_4')(conv_3)
+    conv_4 = BatchNormalization()(conv_4)
+    conv_4 = Activation('elu')(conv_4)
+
+    conv_5 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_5')(conv_4)
+    conv_5 = BatchNormalization()(conv_5)
+    conv_5 = Activation('elu')(conv_5)
+
+    # latent = Flatten()(conv_5)
+    # z_mean = Dense(1, activation='relu', name='z_mean')(conv_5)
+    # z_log_var = Dense(1, activation='relu', name='z_log_var')(conv_5)
+
+    # z = Lambda(sampling,
+    #        output_shape=(latent_dim,), 
+    #        name='z')([z_mean, z_log_var])
+
+
+    # decoder
+    conv_6 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_6')(conv_5)
+    conv_6 = BatchNormalization()(conv_6)
+    conv_6 = Activation('elu')(conv_6)
+
+    conv_7 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_7')(conv_6)
+    conv_7 = BatchNormalization()(conv_7)
+    conv_7 = Activation('elu')(conv_7)
+
+    conc_1 = concatenate([conv_7, conv_4])
+
+    conv_8 = Conv2D(48, (5, 5), padding='same', activation='elu', name='conv2d_8')(conc_1)
+    x = BatchNormalization()(conv_8)
+    conv_8 = Activation('elu')(x)
+    conc_2 = concatenate([conv_8, conv_3])
+
+    upsm_1 = UpSampling2D(size = (2,2), name='upsm2d_1')(conc_2)
+    
+    conv_9 = Conv2D(36, (5, 5), padding='same', activation='elu', name='conv2d_9')(upsm_1)
+    conv_9 = BatchNormalization()(conv_9)
+    conv_9 = Activation('elu')(conv_9)
+
+    conc_3 = concatenate([conv_9, conv_2])
+
+    upsm_2 = UpSampling2D(size = (2,2), name='upsm2d_2')(conc_3)
+
+    conv_10 = Conv2D(24, (5, 5), padding='same', activation='elu', name='conv2d_10')(upsm_2)
+    conv_10 = BatchNormalization()(conv_10)
+    conv_10 = Activation('elu')(conv_10)
+    conc_4 = concatenate([conv_10, conv_1])
+
+    conv_11 = Conv2D(1, (1, 1), activation='sigmoid', name='conv2d_11')(conc_4)
+
+    # fc_1 = Dense(1000, activation='relu', name='fc_1')(flat)
+    # fc_2 = Dense(100 , activation='relu', name='fc_2')(fc_1)
+    # fc_3 = Dense(50 , activation='relu', name='fc_3')(fc_2)
+    # fc_4 = Dense(10 , activation='relu', name='fc_3')(fc_3)
+    # fc_out = Dense(config['num_outputs'], name='fc_out')(fc_4)
+    
+    model = Model(inputs=[img_input], outputs=[conv_11])
+    # model = Model(inputs=[img_input], outputs=[conv_11, z])
+    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
+    return model
+
 
 class NetModel:
     def __init__(self, model_path, base_model_path=None):
@@ -338,18 +352,6 @@ class NetModel:
         self.summary()
         self._compile()
 
-
-
-    # ###########################################################################
-    # #
-    def _vae_bce(self, x, z_decoded):
-        x = K.flatten(x)
-        z_decoded = K.flatten(z_decoded)
-        xent_loss = keras.metrics.binary_crossentropy(x,z_decoded)
-        kl_loss   = -5e-4*K.mean(1+z_log_var-K.square(z_mean)-K.exp(z_log_var),axis=-1)
-        return K.mean(xent_loss + kl_loss)
-
-    ###########################################################################
     #
     def _compile(self):
         if config['lstm'] is True:
@@ -359,7 +361,7 @@ class NetModel:
         decay = config['decay']
                       
         if config['latent'] is True:
-            self.model.compile(optimizer=optimizers.Adam(lr=learning_rate, decay=decay), loss=losses.binary_crossentropy)
+            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=["accuracy"])
             # self.model.compile(optimizer="rmsprop", loss=self._vae_bce)
         else:
             self.model.compile(loss=losses.mean_squared_error,

@@ -7,7 +7,7 @@ History:
 
 @author: jaerock
 """
-
+import tensorflow as tf
 from datetime import datetime
 import matplotlib.pyplot as plt
 import cv2
@@ -416,7 +416,8 @@ class DriveTrain:
                 # print("hi2")
                 # print(image_path)
                 image = cv2.imread(image_path)
-                segimg = cv2.imread(segimg_path)
+                segimg = cv2.imread(segimg_path, 0)
+                segimg = 255 - segimg
                 # if collected data is not cropped then crop here
                 # otherwise do not crop.
                 if Config.data_collection['crop'] is not True:
@@ -430,6 +431,8 @@ class DriveTrain:
                 # if data == 'train':
                 #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
                 # print(image.shape)
+                # segimg.
+                # segimg.
                 images.append(image)
                 segimgs.append(segimg)
 
@@ -451,6 +454,8 @@ class DriveTrain:
                         X_train = np.array(images)
                         # if config['num_outputs'] == 1:
                         y_train = np.array(segimg)
+                        # print(y_train.max())
+                        y_train = np.repeat(y_train[..., np.newaxis], 1, -1)/y_train.max()
                         
                         # print(X_train_vel.shape)
                         # print(y_train.shape)
@@ -564,9 +569,14 @@ class DriveTrain:
         callbacks.append(earlystop)
 
         # tensor board
-        logdir = config['tensorboard_log_dir'] + datetime.now().strftime("%Y%m%d-%H%M%S")
-        tensorboard = TensorBoard(log_dir=logdir)
-        callbacks.append(tensorboard)
+        # logdir = config['tensorboard_log_dir'] + datetime.now().strftime("%Y%m%d-%H%M%S")
+        # tensorboard = TensorBoard(log_dir=logdir)
+        # feed_inputs_4_display = some_function_you_wrote()
+        # callbacks.append(customModelCheckpoint( log_dir = './logs'))
+   
+        # callbacks.append(tensorboard)
+        # tensorboard_image = TensorBoardImage('Image Example')
+        # callbacks.append(tensorboard)
 
         self.train_hist = self.net_model.model.fit_generator(
                 self.train_generator, 
@@ -576,7 +586,7 @@ class DriveTrain:
                 validation_steps=self.num_valid_samples//config['batch_size'],
                 verbose=1, callbacks=callbacks, 
                 use_multiprocessing=True,
-                workers=24)
+                workers=48)
         
     ###########################################################################
     #
@@ -626,3 +636,64 @@ class DriveTrain:
             
         self._plot_training_history()
         Config.summary()
+
+
+from keras.callbacks import Callback
+import numpy as np
+from keras import backend as K
+import tensorflow as tf
+import cv2
+
+# make the 1 channel input image or disparity map look good within this color map. This function is not necessary for this Tensorboard problem shown as above. Just a function used in my own research project.
+def colormap_jet(img):
+    return cv2.cvtColor(cv2.applyColorMap(np.uint8(img), 2), cv2.COLOR_BGR2RGB)
+
+class customModelCheckpoint(Callback):
+    def __init__(self, log_dir='./logs/tmp/', feed_inputs_display=None):
+          super(customModelCheckpoint, self).__init__()
+          self.seen = 0
+          self.feed_inputs_display = feed_inputs_display
+          self.writer = tf.summary.FileWriter(log_dir)
+
+    # this function will return the feeding data for TensorBoard visualization;
+    # arguments:
+    #  * feed_input_display : [(input_yourModelNeed, left_image, disparity_gt ), ..., (input_yourModelNeed, left_image, disparity_gt), ...], i.e., the list of tuples of Numpy Arrays what your model needs as input and what you want to display using TensorBoard. Note: you have to feed the input to the model with feed_dict, if you want to get and display the output of your model. 
+    def custom_set_feed_input_to_display(self, feed_inputs_display):
+          self.feed_inputs_display = feed_inputs_display
+
+    # copied from the above answers;
+    def make_image(self, numpy_img):
+          from PIL import Image
+          height, width, channel = numpy_img.shape
+          image = Image.fromarray(numpy_img)
+          import io
+          output = io.BytesIO()
+          image.save(output, format='PNG')
+          image_string = output.getvalue()
+          output.close()
+          return tf.Summary.Image(height=height, width=width, colorspace= channel, encoded_image_string=image_string)
+
+
+    # A callback has access to its associated model through the class property self.model.
+    def on_batch_end(self, batch, logs = None):
+        logs = logs or {} 
+        self.seen += 1
+        if self.seen % 5 == 0: # every 200 iterations or batches, plot the costumed images using TensorBorad;
+            summary_str = []
+        #   for i in range(len(self.feed_inputs_display)):
+            feature = cv2.imread('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109.jpg')
+            # feature = cv2.resize(feature, 
+            #                             (config['input_image_width'],
+            #                             config['input_image_height']))
+            # feature = np.expand_dims(feature, axis=0)
+            feature = tf.keras.preprocessing.image.array_to_img(feature)
+            # cv2.imwrite('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109.jpg',feature)
+
+            disp_gt = cv2.imread('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109_latent.jpg')
+            disp_pred = np.squeeze(K.get_session().run(self.model.output, feed_dict = {self.model.input : feature}), axis = 0)
+            #disp_pred = np.squeeze(self.model.predict_on_batch(feature), axis = 0)
+            # summary_str.append(tf.Summary.Value(tag= 'plot/img0/{}'.format(i), image= self.make_image( colormap_jet(imgl)))) # function colormap_jet(), defined above;
+            summary_str.append(tf.Summary.Value(tag= 'plot/disp_gt/1', image= disp_gt))
+            summary_str.append(tf.Summary.Value(tag= 'plot/disp/1', image= disp_pred))
+
+            self.writer.add_summary(tf.Summary(value = summary_str), global_step =self.seen)

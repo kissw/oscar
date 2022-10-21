@@ -35,11 +35,11 @@ samples_per_bin: 4000
 # data_shuffle: True
 validation_rate: 0.3
 num_epochs: 50000
-batch_size: 64
+batch_size: 16
 num_inputs: 1     # input: image, velocity
 num_outputs: 1    # output: steering_angle, throttle, brake
 only_thr_brk: False
-early_stopping_patience: 20000
+early_stopping_patience: 3000
 # tensorboard log dir
 tensorboard_log_dir: logs/scalars/
 
