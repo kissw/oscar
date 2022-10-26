@@ -101,6 +101,9 @@ class DriveTrain:
             elif config['latent'] is True:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.segimg_names))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.segimg_names))
+            elif config['num_inputs'] == 1:
+                train_samples = list(zip(self.t_data.image_names, self.t_data.measurements))
+                valid_samples = list(zip(self.v_data.image_names, self.v_data.measurements))
             else:
                 train_samples = list(zip(self.t_data.image_names, self.t_data.velocities, self.t_data.measurements))
                 valid_samples = list(zip(self.v_data.image_names, self.v_data.velocities, self.v_data.measurements))
@@ -207,7 +210,7 @@ class DriveTrain:
                 data_path = self.t_data_path
             elif data == 'valid':
                 data_path = self.v_data_path
-                
+            
             if config['num_inputs'] == 2 or config['only_thr_brk'] is True:
                 for image_name, velocity, measurement, goal_velocity in batch_samples:
                     # for image_name, velocity, measurement, delta in batch_samples:
@@ -323,6 +326,36 @@ class DriveTrain:
                         else:
                             measurements.append(steering_angle*config['steering_angle_scale'])
                 return images, velocities, measurements, goal_velocities
+
+            elif config['num_inputs'] == 1:
+                for image_name, measurement in batch_samples:
+                    # for image_name, velocity, measurement, delta in batch_samples:
+                    image_path = data_path + '/' + image_name
+                    # print(image_path)
+                    image = cv2.imread(image_path)
+                    # if collected data is not cropped then crop here
+                    # otherwise do not crop.
+                    if Config.data_collection['crop'] is not True:
+                        image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                    Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                    image = cv2.resize(image, 
+                                        (config['input_image_width'],
+                                        config['input_image_height']))
+                    image = self.image_process.process(image)
+                    # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                    # if data == 'train':
+                    #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                    # print(image.shape)
+                    images.append(image)
+                    # print(measurement)
+                    steering_angle, throttle, brake = measurement
+                    
+                    if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
+                        steering_angle = 0
+
+                    measurements.append(steering_angle*config['steering_angle_scale'])
+                    
+                return images, measurements
 
         def _prepare_lstm_batch_samples(batch_samples, data=None):
             images = []
@@ -521,7 +554,7 @@ class DriveTrain:
                                 X_train = [X_train_str, X_train_vel, X_train_gvel]
                                 
                             else:
-                                images, _, measurements = _prepare_batch_samples(batch_samples, data)
+                                images, measurements = _prepare_batch_samples(batch_samples, data)
                                 X_train = np.array(images)
                                 
                             

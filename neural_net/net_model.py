@@ -224,6 +224,85 @@ def sampling(args):
     epsilon = K.random_normal(shape=(batch, dim))
     return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
+def model_biminet_pretrained(base_model_path):
+
+    base_weightsfile = base_model_path+'.h5'
+    base_modelfile   = base_model_path+'.json'
+    
+    base_json_file = open(base_modelfile, 'r')
+    base_loaded_model_json = base_json_file.read()
+    base_json_file.close()
+    bimi_model = model_from_json(base_loaded_model_json)
+    bimi_model.load_weights(base_weightsfile)
+    # if config['style_train'] is True:
+    bimi_model.trainable = False
+
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    lamb_str = Lambda(lambda x: x)(img_input)
+
+    pretrained_model_conv5 = Model(bimi_model.input, bimi_model.get_layer('activation_5').output, name='bimi_model_conv_output')
+    pretrained_model_conv5.trainable = False
+    base_model_last_output = pretrained_model_conv5([lamb_str])
+    flat = Flatten()(base_model_last_output)
+    fc_1 = Dense(1000, activation='elu', name='fc_1')(flat)
+    fc_2 = Dense(100, activation='elu', name='fc_2')(fc_1)
+    fc_3 = Dense(50, activation='elu', name='fc_3')(fc_2)
+    fc_4 = Dense(10, activation='elu', name='fc_4')(fc_3)
+    fc_out = Dense(config['num_outputs'], name='fc_out')(fc_4)
+
+    model = Model(inputs=[img_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input], outputs=[conv_11, z])
+    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
+    return model
+def model_biminet():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    
+    lamb_str = Lambda(lambda x: x)(img_input)
+    
+    # encoder
+    conv_1 = Conv2D(24, (5, 5), padding='same', activation='elu', name='conv2d_1')(lamb_str)
+    conv_1 = BatchNormalization()(conv_1)
+    conv_1 = Activation('elu')(conv_1)
+    pool_1 = MaxPooling2D(pool_size=(2, 2), name='pool2d_1')(conv_1)
+
+    conv_2 = Conv2D(36, (5, 5), padding='same', activation='elu', name='conv2d_2')(pool_1)
+    conv_2 = BatchNormalization()(conv_2)
+    conv_2 = Activation('elu')(conv_2)
+    pool_2 = MaxPooling2D(pool_size=(2, 2), name='pool2d_2')(conv_2)
+
+    conv_3 = Conv2D(48, (5, 5), padding='same', activation='elu', name='conv2d_3')(pool_2)
+    conv_3 = BatchNormalization()(conv_3)
+    conv_3 = Activation('elu')(conv_3)
+
+    conv_4 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_4')(conv_3)
+    conv_4 = BatchNormalization()(conv_4)
+    conv_4 = Activation('elu')(conv_4)
+
+    conv_5 = Conv2D(64, (3, 3), padding='same', activation='elu', name='conv2d_5')(conv_4)
+    conv_5 = BatchNormalization()(conv_5)
+    conv_5 = Activation('elu')(conv_5)
+
+    flat = Flatten()(conv_5)
+    fc_1 = Dense(1000, activation='elu', name='fc_1')(flat)
+    fc_2 = Dense(100 , activation='elu', name='fc_2')(fc_1)
+    fc_3 = Dense(50 , activation='elu', name='fc_3')(fc_2)
+    fc_4 = Dense(10 , activation='elu', name='fc_4')(fc_3)
+    fc_out = Dense(config['num_outputs'], name='fc_out')(fc_4)
+    
+    model = Model(inputs=[img_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input], outputs=[conv_11, z])
+    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
+    return model
+
+
 def model_biminet_latent():
     input_shape = (config['input_image_height'],
                     config['input_image_width'],
@@ -337,6 +416,10 @@ class NetModel:
             self.model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_BIMI_LATENT:
             self.model = model_biminet_latent()
+        elif config['network_type'] == const.NET_TYPE_BIMI:
+            self.model = model_biminet()
+        elif config['network_type'] == const.NET_TYPE_BIMI_PRETRAINED:
+            self.model = model_biminet_pretrained(base_model_path)
         elif config['network_type'] == const.NET_TYPE_STYLE1:
             self.model = model_style1(base_model_path)
         elif config['network_type'] == const.NET_TYPE_STYLE2:

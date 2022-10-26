@@ -10,12 +10,12 @@ version: 0.92
 ## neural network 
 
 # network definition
-network_type: 100       # refer to neural_net/const.py
+network_type: 102       # refer to neural_net/const.py
 gpus: 1
 
 weight_load: False
 
-latent: True
+latent: False
 style_train: False
 style_run: False
 lstm: False
