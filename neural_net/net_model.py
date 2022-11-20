@@ -61,6 +61,37 @@ def model_pilotnet():
     # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
     return model
 
+
+def model_pilotnet_origin():
+    input_shape = (config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'],)
+    # input_delta = (3,)
+    ######model#######
+    img_input = Input(shape=input_shape)
+    # vel_input = Input(shape=input_vel)
+    # delta_input = Input(shape=input_delta)
+    
+    lamb_str = Lambda(lambda x: x/127.5 - 1.0)(img_input)
+    # lamb_delta = Lambda(lambda x: x)(delta_input)
+    
+    conv_1 = Conv2D(24, (5, 5), strides=(2,2), activation='relu', name='conv2d_1')(lamb_str)
+    conv_2 = Conv2D(36, (5, 5), strides=(2,2), activation='relu', name='conv2d_2')(conv_1)
+    conv_3 = Conv2D(64, (5, 5), strides=(2,2), activation='relu', name='conv2d_3')(conv_2)
+    conv_4 = Conv2D(64, (3, 3), padding='same',activation='relu', name='conv2d_4')(conv_3)
+    conv_5 = Conv2D(64, (3, 3), padding='same',activation='relu', name='conv2d_last')(conv_4)
+    flat = Flatten()(conv_5)
+    # fc_c = Dense(50, activation='relu', name='fc_d')(lamb_delta)
+    fc_1 = Dense(100, activation='relu', name='fc_1')(flat)
+    # conc = Concatenate()([fc_1, fc_v, fc_c])
+    fc_2 = Dense(50 , activation='relu', name='fc_2')(fc_1)
+    fc_3 = Dense(10 , activation='relu', name='fc_3')(fc_2)
+    fc_out = Dense(1, name='fc_out')(fc_3)
+    
+    model = Model(inputs=[img_input], outputs=[fc_out])
+    # model = Model(inputs=[img_input, vel_input, delta_input], outputs=[fc_out])
+    return model
+
 def pretrained_pilot(base_model_path):
     base_weightsfile = base_model_path+'.h5'
     base_modelfile   = base_model_path+'.json'
@@ -241,10 +272,13 @@ class NetModel:
             self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_STYLE2:
             self.model = model_style2(base_model_path)
+            self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_STYLE3:
             self.model = model_style1(base_model_path)
+            self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_STYLE4:
             self.model = model_style2(base_model_path)
+            self.base_model = model_pilotnet()
         elif config['network_type'] == const.NET_TYPE_NONLSTM:
             self.model = model_nonlstm()
         else:

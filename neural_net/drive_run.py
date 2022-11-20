@@ -68,9 +68,15 @@ class DriveRun:
             np_vel = np.array(velocity).reshape(-1, 1)
             np_goalvel = np.array(goal_velocity).reshape(-1, 1)
             predict = self.net_model.model.predict([np_img, np_vel, np_goalvel])
-            steering_angle = self.net_model.base_model.predict([np_img, np_vel])[0][0]
-            throttle = predict[0][0]
-            brake = predict[0][1]
+            if Config.neural_net['only_thr_brk'] is True:
+                steering_angle = self.net_model.base_model.predict([np_img, np_vel])[0][0]
+                throttle = predict[0][0]
+                brake = predict[0][1]
+            else:
+                steering_angle = predict[0][0]
+                throttle = predict[0][1]
+                brake = predict[0][2]
+                
             # brake = 0
             
             steering_angle /= Config.neural_net['steering_angle_scale']

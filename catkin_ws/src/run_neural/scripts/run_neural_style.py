@@ -145,12 +145,10 @@ def main(weight_file_name, base_weight_name=None):
             # print(velocity)
             steer, throttle, brake = neural_control.drive.run((neural_control.image, velocity, float(int(goal_velocity-velocity))))
             # steer, throttle, brake = neural_control.drive.run((neural_control.image, neural_control.base_model_image, velocity, goal_velocity))
-            if config['only_thr_brk'] is True:
-                if config['num_outputs'] == 3:
-                    # prediction is [ [] ] numpy.ndarray
-                    joy_data.steer = steer
-                    joy_data.throttle = throttle
-                    joy_data.brake = brake
+            joy_data.steer = steer
+            joy_data.throttle = throttle
+            joy_data.brake = brake
+                
             
         #############################
         ## very very simple controller

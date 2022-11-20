@@ -22,10 +22,8 @@ from keras.utils import plot_model as plot_model
 # conda install graphviz
 
 def model_list():
-    if config['network_type'] == const.NET_TYPE_PILOT_M:
-        model = net_model.model_pilotnet_m()
-    elif config['network_type'] == const.NET_TYPE_PILOT:
-        model = net_model.model_pilotnet()
+    if config['network_type'] == const.NET_TYPE_PILOT:
+        model = net_model.model_pilotnet_origin()
     elif config['network_type'] == const.NET_TYPE_VS:
         model = net_model.model_vs()
     elif config['network_type'] == const.NET_TYPE_DAVE2SKY:
@@ -60,7 +58,7 @@ if __name__ == '__main__':
 
         # main(sys.argv[1], sys.argv[2])
         model = model_list()
-        vs_plot_model(model, to_file=str(sys.argv[1])+'N'+str(config['network_type'])+'.png', show_shapes=True, show_layer_names=False)
+        vs_plot_model(model, to_file=str(sys.argv[1])+'N'+str(config['network_type'])+'.pdf', show_shapes=True, show_layer_names=False)
 
     except KeyboardInterrupt:
         print ('\nShutdown requested. Exiting...')

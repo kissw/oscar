@@ -12,8 +12,14 @@ from gazebo_msgs.msg import ModelStates
 
 import sys, os, math
 import numpy as np
+import random
+from datetime import datetime
+random.seed(datetime.now())
 from progressbar import ProgressBar
 from drive_data import DriveData
+
+global rand_num
+rand_num = str(random.randrange(0,9999))
 
 class MapInfoGenerator:
     def __init__(self, csv_path, follow_lane):
@@ -64,60 +70,62 @@ class MapInfoGenerator:
         for i in range(0, len(self.msg_track_name)):
             if 'Road' in self.msg_track_name[i]:
                 track_form.append(self.msg_track_name[i].split(' ')[1])
-                track_length.append( (self.msg_track_name[i].split(' ')[4]).split('m')[0] )
+                if (self.msg_track_name[i].split(' ')[4]).split('m')[0][-1] == 'k':
+                    track_length.append( (self.msg_track_name[i].split(' ')[4]).split('m')[0][:-1]+'000' )
+                else :
+                    track_length.append( (self.msg_track_name[i].split(' ')[4]).split('m')[0] )
         self.track.append(track_form)
         self.track.append(track_length)
         self._oscar_path_check()
-        self._build_txt(self.oscar_path+"/neural_net/map_info", self.track)
+        # self._build_txt(self.oscar_path+"neural_net/map_info", self.track)
         self._cal_totalerror()
         self._cal_groundtruth(self.oscar_path+"/neural_net/map_info")
-        os.system("rosnode kill " + "eval_perf")
+        os.system("rosnode kill " + "eval_perf"+rand_num)
         
     def _build_txt(self, data_path, data):
+        print(data_path)
+        csv_name = data_path[-len(self.csv_path.split('/')[-1]):].split('.')[0]
+        data_path = data_path[:-len(self.csv_path.split('/')[-1])]
+        print(csv_name)
+        print(data_path)
         if data_path[-1] != '/':
             data_path = data_path + '/'
 
-        # find the second '/' from the end to get the folder name
-        loc_dir_delim = data_path[:-1].rfind('/')
-        if (loc_dir_delim != -1):
-            folder_name = data_path[loc_dir_delim+1:-1]
-            txt_file = folder_name + ".txt"
-        else:
-            folder_name = data_path[:-1]
-            txt_file = folder_name + ".txt"
+        txt_file = data_path + csv_name + "_eval.txt"
+        
         new_txt = []
         bar = ProgressBar()
         for i in bar(range(len(data))):
             new_txt.append(str(data[i])
                         + '\n')
             
-        new_txt_fh = open(data_path + txt_file, 'w')
+        new_txt_fh = open(txt_file, 'w')
         for i in range(len(new_txt)):
             new_txt_fh.write(new_txt[i])
         new_txt_fh.close()
         
     def _build_csv(self, data_path, data):
+        csv_name = data_path[-len(self.csv_path.split('/')[-1]):].split('.')[0]
+        data_path = data_path[:-len(self.csv_path.split('/')[-1])]
+        # print(csv_name)
+        # print(data_path)
         if data_path[-1] != '/':
             data_path = data_path + '/'
 
-        # find the second '/' from the end to get the folder name
-        loc_dir_delim = data_path[:-1].rfind('/')
-        if (loc_dir_delim != -1):
-            folder_name = data_path[loc_dir_delim+1:-1]
-            txt_file = folder_name + ".csv"
-        else:
-            folder_name = data_path[:-1]
-            txt_file = folder_name + ".csv"
-        new_txt = []
+        csv_file = data_path + csv_name + "_eval.csv"
+        # print('1csv_name', csv_name)
+        
+        new_csv = []
         bar = ProgressBar()
         for i in bar(range(len(data))):
-            new_txt.append(str(data[i])
+            new_csv.append(str(data[i])
                         + '\n')
             
-        new_txt_fh = open(data_path + txt_file, 'w')
-        for i in range(len(new_txt)):
-            new_txt_fh.write(new_txt[i])
-        new_txt_fh.close()
+            
+        new_csv_fh = open(csv_file, 'w')
+        for i in range(len(new_csv)):
+            new_csv_fh.write(new_csv[i])
+        new_csv_fh.close()
         
     def _cal_groundtruth(self, data_path):
         new_csv = []
@@ -336,31 +344,34 @@ class MapInfoGenerator:
         print('emdc : ' +str(format(self._cal_emdc(self.total_error, self.car_times), ".9f")))
         print('mdc  : '  +str(format(self._cal_mdc(self.total_error), ".9f")))
         print('mce  : '  +str(format(self._cal_mce(self.car_steering, self.car_times), ".9f")))
-        print('var : ' +str(format(self._cal_var(self.total_error), ".9f")))
+        print('var : ' +str(format(self._cal_var(self.total_error_nabs), ".9f")))
         print('dist : ' +str(format(self._cal_dist(self.car_pose), ".9f")))
         print('maxvel : ' +str(format(self._cal_maxvel(self.car_velocity), ".9f")))
         print('avrvel : ' +str(format(self._cal_avrvel(self.car_velocity), ".9f")))
         self._cal_ggdiagram(self.car_velocities, self.car_times, self.car_pose)
-        error_txt=[]
-        error_txt.append('mmdc , ' +str(format(self._cal_mmdc(self.total_error), ".9f")))
-        error_txt.append('mddc , ' +str(format(self._cal_mddc(self.total_error_nabs, self.car_times), ".9f")))
-        error_txt.append('emdc , ' +str(format(self._cal_emdc(self.total_error, self.car_times), ".9f")))
-        error_txt.append('mdc  , ' +str(format(self._cal_mdc(self.total_error), ".9f")))
-        error_txt.append('mce  , ' +str(format(self._cal_mce(self.car_steering, self.car_times), ".9f")))
-        error_txt.append('var  , ' +str(format(self._cal_var(self.total_error), ".9f")))
-        error_txt.append('dist : ' +str(format(self._cal_dist(self.car_pose), ".9f")))
-        error_txt.append('maxvel : ' +str(format(self._cal_maxvel(self.car_velocity), ".9f")))
-        error_txt.append('avrvel : ' +str(format(self._cal_avrvel(self.car_velocity), ".9f")))
-        # self._build_csv(self.csv_path[:-len(self.csv_path.split('/')[-1])], self.total_error_nabs)
-        self._build_csv(self.csv_path[:-len(self.csv_path.split('/')[-1])], error_txt)
-        self._build_txt(self.csv_path[:-len(self.csv_path.split('/')[-1])], error_txt)
-        # print('total error : ',self.total_error)
+        # error_txt=[]
+        # error_txt.append('mmdc , ' +str(format(self._cal_mmdc(self.total_error), ".9f")))
+        # error_txt.append('mddc , ' +str(format(self._cal_mddc(self.total_error_nabs, self.car_times), ".9f")))
+        # error_txt.append('emdc , ' +str(format(self._cal_emdc(self.total_error, self.car_times), ".9f")))
+        # error_txt.append('mdc  , ' +str(format(self._cal_mdc(self.total_error), ".9f")))
+        # error_txt.append('mce  , ' +str(format(self._cal_mce(self.car_steering, self.car_times), ".9f")))
+        # error_txt.append('var  , ' +str(format(self._cal_var(self.total_error), ".9f")))
+        # error_txt.append('dist : ' +str(format(self._cal_dist(self.car_pose), ".9f")))
+        # error_txt.append('maxvel : ' +str(format(self._cal_maxvel(self.car_velocity), ".9f")))
+        # error_txt.append('avrvel : ' +str(format(self._cal_avrvel(self.car_velocity), ".9f")))
+        # # self._build_csv(self.csv_path[:-len(self.csv_path.split('/')[-1])], self.total_error_nabs)
+        # self._build_csv(self.csv_path, error_txt)
+        # self._build_txt(self.csv_path, error_txt)
+        self._build_csv(self.csv_path[:-len(self.csv_path.split('/')[-1])], self.total_error)
+        print('total error : ',self.total_error)
         
         
     def _cal_roadformula(self, car_pose):
         # print(car_pose[0], car_pose[1])
         last_position = [0, 0]
         for i in range(0, len(self.track[0])):
+            
+            print(self.track[1][i])
             road_dist = float(self.track[1][i])
             curve_margin = 2.333
             road_box = [0, 0, 0]
@@ -640,31 +651,31 @@ class MapInfoGenerator:
                     del ax[0], ay[0]
            
         ##########local frame vel###########
-        plt.rcParams["figure.figsize"] = (10,4)
-        plt.rcParams['axes.grid'] = True
-        plt.figure()
-        plt.title('Ax-t diagram', fontsize=20)
-        plt.xlabel('t', fontsize=14)
-        plt.ylabel('Ax(g)', fontsize=14)
-        plt.ylim([-0.3, 0.3])
-        # plt.scatter(range(0, len(ax[:-1])), ax[:-1], s=.1)
-        # plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'red', markersize=1)
-        # plt.plot(range(0, len(vx)), vx,'-', color = 'blue', markersize=1)
-        # plt.plot(px, av_ax_g,'-', color = 'red', markersize=1)
-        # plt.plot(px, vx,'-', color = 'blue', markersize=1)
-        plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'blue', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_Ax-t_Diagram')
+        # plt.rcParams["figure.figsize"] = (10,4)
+        # plt.rcParams['axes.grid'] = True
+        # plt.figure()
+        # plt.title('Ax-t diagram', fontsize=20)
+        # plt.xlabel('t', fontsize=14)
+        # plt.ylabel('Ax(g)', fontsize=14)
+        # plt.ylim([-1.0, 1.0])
+        # # plt.scatter(range(0, len(ax[:-1])), ax[:-1], s=.1)
+        # # plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'red', markersize=1)
+        # # plt.plot(range(0, len(vx)), vx,'-', color = 'blue', markersize=1)
+        # # plt.plot(px, av_ax_g,'-', color = 'red', markersize=1)
+        # # plt.plot(px, vx,'-', color = 'blue', markersize=1)
+        # plt.plot(range(0, len(av_ax_g)), av_ax_g,'-', color = 'blue', markersize=1)
+        # self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+self.csv_path.split('/')[-1].split('.csv')[0]+'_Ax-t_Diagram')
         
-        plt.rcParams["figure.figsize"] = (10,4)
-        plt.rcParams['axes.grid'] = True
-        plt.figure()
-        plt.title('Ay-t diagram', fontsize=20)
-        plt.xlabel('t', fontsize=14)
-        plt.ylabel('Ay(g)', fontsize=14)
-        plt.ylim([-0.3, 0.3])
-        # plt.scatter(range(0, len(av_ay)), av_ay, s=.1)
-        plt.plot(range(0, len(av_ay_g)), av_ay_g,'-', color = 'blue', markersize=1)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_Ay-t_Diagram')
+        # plt.rcParams["figure.figsize"] = (10,4)
+        # plt.rcParams['axes.grid'] = True
+        # plt.figure()
+        # plt.title('Ay-t diagram', fontsize=20)
+        # plt.xlabel('t', fontsize=14)
+        # plt.ylabel('Ay(g)', fontsize=14)
+        # plt.ylim([-1.0, 1.0])
+        # # plt.scatter(range(0, len(av_ay)), av_ay, s=.1)
+        # plt.plot(range(0, len(av_ay_g)), av_ay_g,'-', color = 'blue', markersize=1)
+        # self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+self.csv_path.split('/')[-1].split('.csv')[0]+'_Ay-t_Diagram')
         
         # print(ax, ay)
         plt.rcParams['axes.grid'] = True
@@ -673,27 +684,32 @@ class MapInfoGenerator:
         plt.axis('equal')
         _, axes = plt.subplots()
         c_center = (0,0)
-        c_radius = 0.3
+        c_radius = .7
         draw_circle = plt.Circle(c_center, c_radius, fc='w', ec='r', fill=False, linestyle='--')
         axes.set_aspect(1)
         axes.add_artist(draw_circle)
         
-        plt.title('G-G diagram', fontsize=20)
+        # plt.title('Aggressive Dataset - Straight road', fontsize=20)
+        # plt.title('Aggressive Dataset - Right-turn road', fontsize=20)
+        # plt.title('Aggressive Dataset - Left-turn road', fontsize=20)
+        # plt.title('Conservative Dataset - Straight road', fontsize=20)
+        # plt.title('Conservative Dataset - Right-turn road', fontsize=20)
+        plt.title('Standard Dataset - Left-turn road', fontsize=20)
         plt.xlabel('Ax(g)', fontsize=14)
         plt.ylabel('Ay(g)', fontsize=14)
-        plt.xlim([-0.3, 0.3])
-        plt.ylim([-0.3, 0.3])
+        plt.xlim([-c_radius, c_radius])
+        plt.ylim([-c_radius, c_radius])
         plt.scatter(av_ax_g, av_ay_g, s=.05)
-        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+'safety_dataset_G-G_Diagram')
+        self._savefigs(plt, self.csv_path[:-len(self.csv_path.split('/')[-1])]+self.csv_path.split('/')[-1].split('.csv')[0]+'_G-G_Diagram')
         
     
     def _savefigs(self, plt, filename):
         plt.savefig(filename + '.png', dpi=150)
-        # plt.savefig(filename + '.pdf', dpi=150)
+        plt.savefig(filename + '.pdf', dpi=150)
         print('Saved ' + filename + '.png & .pdf.')
         
 def main(csv_path, follow_lane):
-    rospy.init_node('eval_perf')
+    rospy.init_node('eval_perf'+rand_num)
     m = MapInfoGenerator(csv_path, follow_lane)
     rospy.spin()
         

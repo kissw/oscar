@@ -110,6 +110,11 @@ class Translator:
         command.brake = (1 + message.axes[BRAKE_AXIS])/0.38
         if command.brake > 1.0:
             command.brake = 1.0
+        # ### style conservative
+        # if command.throttle > 0.23:
+        #     command.throttle = 0.23
+        # if command.brake > 0.23:
+        #     command.brake = 0.23
         
         if message.buttons[SHIFT_FORWARD] == 1:
             self.gear = "forward"
