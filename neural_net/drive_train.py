@@ -12,12 +12,13 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-#import keras
+import keras
 import sklearn
 from sklearn.model_selection import train_test_split
 
 import const
 from net_model import NetModel
+from net_model_vae import VAE
 from drive_data import DriveData
 from config import Config
 from image_process import ImageProcess
@@ -68,6 +69,10 @@ class DriveTrain:
             self.t_data_path = data_path+'/train/'+ model_name
             self.v_data_path = data_path+'/valid/'+ model_name
         self.net_model = NetModel(data_path, base_model_path=base_model_path)
+        if config['vae'] is True:
+            self.vae = VAE()
+            self.vae.compile(optimizer=keras.optimizers.Adam())
+            self.vae.fit(mnist_digits, epochs=config['num_epochs'], batch_size=config['batch_size'])
         self.image_process = ImageProcess()
         self.data_aug = DataAugmentation()
         
@@ -79,13 +84,18 @@ class DriveTrain:
         if config['data_split'] is True:
             self.data.read()
             # put velocities regardless we use them or not for simplicity.
-            samples = list(zip(self.data.image_names, self.data.velocities, self.data.measurements))
+
+            if config['vae'] is True:
+                samples = list(zip( self.data.image_names, self.data.velocities, self.data.measurements, 
+                                    self.data.tar_image_names, self.data.tar_steering_angle, self.data.tar_vel, self.data.tar_time))
+            else:
+                samples = list(zip(self.data.image_names, self.data.velocities, self.data.measurements))
             # if config['latent'] is True:
             #     samples = list(zip(self.data.image_names, self.data.segimg_names))
             
             if config['lstm'] is True:
                 self.train_data, self.valid_data = self._prepare_lstm_data(samples)
-            else:    
+            else:   
                 self.train_data, self.valid_data = train_test_split(samples, 
                                         test_size=config['validation_rate'])
         else:
@@ -472,24 +482,84 @@ class DriveTrain:
 
             return images, segimgs
 
+        def _prepare_vae_batch_samples(batch_samples, data=None):
+            images = []
+            steering_angles = []
+            vels = []
+            tar_images = []
+            tar_steering_angles = []
+            tar_vels = []
+            tar_times = []
+            if data is None:
+                data_path = self.data_path
+                
+            for image_name, velocity, measurement, tar_image_name, tar_steering_angle, tar_vel, tar_time in batch_samples:
+                # self.data.image_names, self.data.velocities, self.data.measurements, 
+                # self.data.tar_image_names, self.data.tar_steering_angle, self.data.tar_vel, self.data.tar_time
+                
+                image_path = data_path + '/' + image_name
+                tar_image_path = data_path + '/' + tar_image_name
+
+                image = cv2.imread(image_path)
+                tar_image = cv2.imread(tar_image_path)
+
+                # if collected data is not cropped then crop here
+                # otherwise do not crop.
+                if Config.data_collection['crop'] is not True:
+                    image = image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                    tar_image = tar_image[Config.data_collection['image_crop_y1']:Config.data_collection['image_crop_y2'],
+                                Config.data_collection['image_crop_x1']:Config.data_collection['image_crop_x2']]
+                image = cv2.resize(image, 
+                                    (config['input_image_width'],
+                                    config['input_image_height']))
+                tar_image = cv2.resize(tar_image, 
+                                    (config['input_image_width'],
+                                    config['input_image_height']))
+                image = self.image_process.process(image)
+                tar_image = self.image_process.process(tar_image)
+
+                vels.append(tar_vels)
+                tar_vels.append(tar_vel)
+                tar_times.append(tar_time)
+                tar_steering_angles.append(tar_steering_angle)
+                # if no brake data in collected data, brake values are dummy
+                steering_angle, throttle, brake = measurement
+                steering_angles.append(steering_angle)
+                # cv2.imwrite('/home/kdh/oscar/oscar/e2e_fusion_data/test/aug/'+image_name, image)
+                # if data == 'train':
+                #     cv2.imwrite('/mnt/Data/oscar/train_data/'+image_name, image)
+                # print(image.shape)
+                images.append(image)
+                tar_images.append(tar_image)
+                # segimgs.append(segimg)
+
+
+            return images, vels, steering_angles, tar_images, tar_steering_angles, tar_vels, tar_times
+
 
         def _generator(samples, batch_size=config['batch_size'], data=None):
             num_samples = len(samples)
             while True: # Loop forever so the generator never terminates
-                if config['latent'] is True:
+                if config['vae'] is True:
                     for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
                         batch_samples = samples[offset:offset+batch_size]
                         # print("hi")
 
-                        images, segimg = _prepare_latent_batch_samples(batch_samples, data)
+                        images, vels, steering_angles, tar_images, tar_steering_angles, tar_vels, tar_times = _prepare_vae_batch_samples(batch_samples, data)
                         # print("hi")
                         # if config['num_inputs'] == 1:
-                        X_train = np.array(images)
+                        X_img = np.array(images).astype("float64")/255.0
+                        X_tvel = np.array(tar_vels)
+                        X_tstr = np.array(tar_steering_angles)
+                        X_ttime = np.array(tar_times)
+
+                        y_train = np.array(tar_images).astype("float64")/255.0
                         # if config['num_outputs'] == 1:
-                        y_train = np.array(segimg)
+                        # y_train = np.array(segimg)
                         # print(y_train.max())
-                        y_train = np.repeat(y_train[..., np.newaxis], 1, -1)/y_train.max()
-                        
+                        # y_train = np.repeat(y_train[..., np.newaxis], 1, -1)/y_train.max()
+                        X_train = [X_img, X_tstr, X_tvel, X_ttime]
                         # print(X_train_vel.shape)
                         # print(y_train.shape)
                         yield X_train, y_train
@@ -669,64 +739,3 @@ class DriveTrain:
             
         self._plot_training_history()
         Config.summary()
-
-
-from keras.callbacks import Callback
-import numpy as np
-from keras import backend as K
-import tensorflow as tf
-import cv2
-
-# make the 1 channel input image or disparity map look good within this color map. This function is not necessary for this Tensorboard problem shown as above. Just a function used in my own research project.
-def colormap_jet(img):
-    return cv2.cvtColor(cv2.applyColorMap(np.uint8(img), 2), cv2.COLOR_BGR2RGB)
-
-class customModelCheckpoint(Callback):
-    def __init__(self, log_dir='./logs/tmp/', feed_inputs_display=None):
-          super(customModelCheckpoint, self).__init__()
-          self.seen = 0
-          self.feed_inputs_display = feed_inputs_display
-          self.writer = tf.summary.FileWriter(log_dir)
-
-    # this function will return the feeding data for TensorBoard visualization;
-    # arguments:
-    #  * feed_input_display : [(input_yourModelNeed, left_image, disparity_gt ), ..., (input_yourModelNeed, left_image, disparity_gt), ...], i.e., the list of tuples of Numpy Arrays what your model needs as input and what you want to display using TensorBoard. Note: you have to feed the input to the model with feed_dict, if you want to get and display the output of your model. 
-    def custom_set_feed_input_to_display(self, feed_inputs_display):
-          self.feed_inputs_display = feed_inputs_display
-
-    # copied from the above answers;
-    def make_image(self, numpy_img):
-          from PIL import Image
-          height, width, channel = numpy_img.shape
-          image = Image.fromarray(numpy_img)
-          import io
-          output = io.BytesIO()
-          image.save(output, format='PNG')
-          image_string = output.getvalue()
-          output.close()
-          return tf.Summary.Image(height=height, width=width, colorspace= channel, encoded_image_string=image_string)
-
-
-    # A callback has access to its associated model through the class property self.model.
-    def on_batch_end(self, batch, logs = None):
-        logs = logs or {} 
-        self.seen += 1
-        if self.seen % 5 == 0: # every 200 iterations or batches, plot the costumed images using TensorBorad;
-            summary_str = []
-        #   for i in range(len(self.feed_inputs_display)):
-            feature = cv2.imread('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109.jpg')
-            # feature = cv2.resize(feature, 
-            #                             (config['input_image_width'],
-            #                             config['input_image_height']))
-            # feature = np.expand_dims(feature, axis=0)
-            feature = tf.keras.preprocessing.image.array_to_img(feature)
-            # cv2.imwrite('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109.jpg',feature)
-
-            disp_gt = cv2.imread('/home2/kdh/av/kissw/latent/oscar/e2e_fusion_data/2021-04-09-00-00-03/train/2021-04-09-00-00-03/2021-04-09-20-23-37-237109_latent.jpg')
-            disp_pred = np.squeeze(K.get_session().run(self.model.output, feed_dict = {self.model.input : feature}), axis = 0)
-            #disp_pred = np.squeeze(self.model.predict_on_batch(feature), axis = 0)
-            # summary_str.append(tf.Summary.Value(tag= 'plot/img0/{}'.format(i), image= self.make_image( colormap_jet(imgl)))) # function colormap_jet(), defined above;
-            summary_str.append(tf.Summary.Value(tag= 'plot/disp_gt/1', image= disp_gt))
-            summary_str.append(tf.Summary.Value(tag= 'plot/disp/1', image= disp_pred))
-
-            self.writer.add_summary(tf.Summary(value = summary_str), global_step =self.seen)

@@ -23,9 +23,7 @@ class DriveData:
                   'steering_angle', 'throttle', 'brake', 
                   'linux_time', 
                   'vel', 'vel_x', 'vel_y', 'vel_z',
-                  'accel_x', 'accel_y', 
-                  'pos_x', 'pos_y', 'pos_z',
-                  'segimg_fname']
+                  'pos_x', 'pos_y', 'pos_z', 'tar_image_fname', 'tar_steering_angle', 'tar_vel', 'tar_time']
     # , 
     #               'delta_steering_angle', 'delta_throttle', 'delta_brake']
 
@@ -40,7 +38,11 @@ class DriveData:
         # self.goal_velocities = []
         self.velocities_xyz = []
         self.positions_xyz = []
-        self.segimg_names = []
+        # self.segimg_names = []
+        self.tar_image_names = []
+        self.tar_steering_angle = []
+        self.tar_vel = []
+        self.tar_time = []
         # self.delta = []
         
     def read(self, read = True, show_statistics = True, normalize = True):
@@ -120,10 +122,10 @@ class DriveData:
             
             for i in bar(range(num_data)): # we don't have a title
                 self.image_names.append(self.df.loc[i]['image_fname'])
-                if Config.data_collection['brake'] is True:
-                    self.measurements.append((float(self.df.loc[i]['steering_angle']),
-                                            float(self.df.loc[i]['throttle']), 
-                                            float(self.df.loc[i]['brake'])))
+                # if Config.data_collection['brake'] is True:
+                self.measurements.append((float(self.df.loc[i]['steering_angle']),
+                                        float(self.df.loc[i]['throttle']), 
+                                        float(self.df.loc[i]['brake'])))
                 # else:
                 #     self.measurements.append((float(self.df.loc[i]['steering_angle']),
                 #                             float(self.df.loc[i]['throttle']), 
@@ -132,18 +134,14 @@ class DriveData:
                 self.velocities.append(float(self.df.loc[i]['vel']))
                 self.velocities_xyz.append((float(self.df.loc[i]['vel_x']), 
                                             float(self.df.loc[i]['vel_y']), 
-                                            float(self.df.loc[i]['vel_z']),
-                                            float(self.df.loc[i]['accel_x']), 
-                                            float(self.df.loc[i]['accel_y'])))
+                                            float(self.df.loc[i]['vel_z'])))
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
-                # self.goal_velocities.append(float(self.df.loc[i]['goal_vel']))
-                if self.df.loc[i]['segimg_fname'] is not None:
-                    self.segimg_names.append(self.df.loc[i]['segimg_fname'])
-                # self.delta.append((float(self.df.loc[i]['delta_steering_angle']),
-                #                             float(self.df.loc[i]['delta_throttle']),
-                #                             float(self.df.loc[i]['delta_brake'])))
+                self.tar_image_names.append(self.df.loc[i]['tar_image_fname'])
+                self.tar_steering_angle.append(float(self.df.loc[i]['tar_steering_angle']))
+                self.tar_vel.append(float(self.df.loc[i]['tar_vel']))
+                self.tar_time.append(float(self.df.loc[i]['tar_time']))
 
 
     def get_data_path(self):
