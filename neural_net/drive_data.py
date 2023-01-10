@@ -18,17 +18,8 @@ import random
 from config import Config
 
 class DriveData:
-
-    csv_header = ['image_fname', 
-                  'steering_angle', 'throttle', 'brake', 
-                  'linux_time', 
-                  'vel', 'vel_x', 'vel_y', 'vel_z',
-                  'pos_x', 'pos_y', 'pos_z', 'tar_image_fname', 'tar_steering_angle', 'tar_vel', 'tar_time']
-    # , 
-    #               'delta_steering_angle', 'delta_throttle', 'delta_brake']
-
-
-    def __init__(self, csv_fname):
+   
+    def __init__(self, csv_fname, csv_header=None):
         self.csv_fname = csv_fname
         self.df = None
         self.image_names = []
@@ -43,6 +34,19 @@ class DriveData:
         self.tar_steering_angle = []
         self.tar_vel = []
         self.tar_time = []
+        self.t1_image_names = []
+        self.t1_steering_angle = []
+        self.t1_vel = []
+        self.t1_time = []
+        if csv_header is None:
+            csv_header = ['image_fname', 
+                  'steering_angle', 'throttle', 'brake', 
+                  'linux_time', 
+                  'vel', 'vel_x', 'vel_y', 'vel_z',
+                  'pos_x', 'pos_y', 'pos_z', 'tar_image_fname', 'tar_steering_angle', 'tar_vel', 'tar_time',
+                  't1_image_fname', 't1_steering_angle', 't1_vel', 't1_time']
+        self.csv_header = csv_header
+
         # self.delta = []
         
     def read(self, read = True, show_statistics = True, normalize = True):
@@ -138,10 +142,16 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
-                self.tar_image_names.append(self.df.loc[i]['tar_image_fname'])
-                self.tar_steering_angle.append(float(self.df.loc[i]['tar_steering_angle']))
-                self.tar_vel.append(float(self.df.loc[i]['tar_vel']))
-                self.tar_time.append(float(self.df.loc[i]['tar_time']))
+                if 'tar_image_fname' in self.csv_header:
+                    self.tar_image_names.append(self.df.loc[i]['tar_image_fname'])
+                    self.tar_steering_angle.append(float(self.df.loc[i]['tar_steering_angle']))
+                    self.tar_vel.append(float(self.df.loc[i]['tar_vel']))
+                    self.tar_time.append(float(self.df.loc[i]['tar_time']))
+                if 't1_image_fname' in self.csv_header:
+                    self.t1_image_names.append(self.df.loc[i]['t1_image_fname'])
+                    self.t1_steering_angle.append(float(self.df.loc[i]['t1_steering_angle']))
+                    self.t1_vel.append(float(self.df.loc[i]['t1_vel']))
+                    self.t1_time.append(float(self.df.loc[i]['t1_time']))
 
 
     def get_data_path(self):
