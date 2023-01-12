@@ -791,8 +791,8 @@ class NetModel:
             self.model = model_jaerock_elu()
         elif config['network_type'] == const.NET_TYPE_CE491:
             self.model = model_ce491()
-        elif config['network_type'] == const.NET_TYPE_JAEROCK_VEL:
-            self.model = model_jaerock_vel()
+        elif config['network_type'] == const.NET_TYPE_KICS:
+            self.model = model_ce491()
         elif config['network_type'] == const.NET_TYPE_JAEROCK_ELU_360:
             self.model = model_jaerock_elu()
         elif config['network_type'] == const.NET_TYPE_SAP:
@@ -860,24 +860,16 @@ class NetModel:
         # samples = list(self.data.image_names)
         # y_true = tf.Print(y_true, [y_true[0]], "Inside y_true ")
         # y_pred = tf.Print(y_pred, [y_pred[0]], "Inside y_pred ")
-        
-        gt_str = 450 * y_true[0][0] / config['steering_angle_scale']
-        pred_str = 450 * y_pred[0][0] / config['steering_angle_scale']
-        str_error = pred_str - gt_str
-        # lanecenter_x = y_true[0][1]
+                # lanecenter_x = y_true[0][1]
         # lanecenter_y = y_true[0][2]
         
         # vel = y_true[0][3]
         # t = 1/30
-        d = 0.5
         # gt_x = y_true[0][4]
         # gt_y = y_true[0][5]
         
-        gt_error = y_true[0][6] # error > 0 right
-        # i = gt_error/abs(gt_error)
-        # dev_error = 0
-        dev_error = (gt_error + d*K.sin(str_error * 0.0174533)) / 450.0
-            
+        gt_error = y_true[0][1]*y_true[0][1]
+        
         diff = y_true[0][0] - y_pred[0][0]
         # y_true = tf.Print(y_true, [gt_x], "gt_x")
         # y_true = tf.Print(y_true, [i], "y_true")
@@ -886,7 +878,7 @@ class NetModel:
         # diff = tf.Print(diff, [K.square(diff)], "diff+dev")
         
         # print(y_pred[0])
-        return K.mean(K.square(diff)) + K.mean(K.square(dev_error))
+        return K.mean(K.square(diff)+gt_error)
     
 
     ###########################################################################
@@ -905,7 +897,7 @@ class NetModel:
         else:
             self.model.compile(loss=losses.mean_squared_error,
                         optimizer=optimizers.Adam(lr=learning_rate, decay=decay), 
-                        metrics=['accuracy'])
+                        metrics=[losses.mean_squared_error])
 
 
     ###########################################################################
