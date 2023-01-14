@@ -927,6 +927,60 @@ def model_conjoin_lstm_r(): #
 
     return model
 
+
+
+def model_zigzag_classifier():
+    # from keras.layers import concatenate
+    input_shape = (None, config['input_image_height'],
+                    config['input_image_width'],
+                    config['input_image_depth'])
+    str_shape = (None, 1)
+
+    ######img model#######
+    img_input = Input(shape=input_shape)
+    str_input = Input(shape=str_shape)
+    lamb   = TimeDistributed(Lambda(lambda x: x/127.5 - 1.0))(img_input)
+    conv_1 = TimeDistributed(Conv2D(24, (5, 5), strides=(2,2)), name='conv2d_1')(lamb)
+    conv_1 = TimeDistributed(BatchNormalization())(conv_1)
+    conv_1 = TimeDistributed(Activation('elu'))(conv_1)
+
+    conv_2 = TimeDistributed(Conv2D(36, (5, 5), strides=(2,2)), name='conv2d_2')(conv_1)
+    conv_2 = TimeDistributed(BatchNormalization())(conv_2)
+    conv_2 = TimeDistributed(Activation('elu'))(conv_2)
+
+    conv_3 = TimeDistributed(Conv2D(48, (5, 5), strides=(2,2)), name='conv2d_3')(conv_2)
+    conv_3 = TimeDistributed(BatchNormalization())(conv_3)
+    conv_3 = TimeDistributed(Activation('elu'))(conv_3)
+
+    conv_4 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_4')(conv_3)
+    conv_4 = TimeDistributed(BatchNormalization())(conv_4)
+    conv_4 = TimeDistributed(Activation('elu'))(conv_4)
+
+    conv_5 = TimeDistributed(Conv2D(64, (3, 3)), name='conv2d_last')(conv_4)
+    conv_5 = TimeDistributed(BatchNormalization())(conv_5)
+    conv_5 = TimeDistributed(Activation('elu'))(conv_5)
+
+    img_flat  = TimeDistributed(Flatten(), name='flat')(conv_5)
+
+
+    fc_s1 = TimeDistributed(Dense(100), name='fc_s1')(str_input)
+    fc_s1 = TimeDistributed(Activation('elu'))(fc_s1)
+    fc_s2 = TimeDistributed(Dense(50), name='fc_s2')(fc_s1)
+    fc_s2 = TimeDistributed(Activation('elu'))(fc_s2)
+
+    # conc_1 = concatenate([img_flat, fc_s2])
+    conc_1  = Concatenate()([img_flat, fc_s2])
+    lstm   = LSTM(1000, return_sequences=False, name='lstm')(conc_1)
+    fc_1   = Dense(500, activation='elu', name='fc_1')(lstm)
+    fc_2   = Dense(100 , activation='elu', name='fc_2')(fc_1)
+    fc_3   = Dense(10 , activation='elu', name='fc_3')(fc_2)
+    fc_last = Dense(1, activation="sigmoid", name='fc_str')(fc_3)
+    
+    model = Model(inputs=[img_input, str_input], outputs=fc_last)
+
+    return model
+
+
 class NetModel:
     def __init__(self, model_path):
         self.model = None
@@ -1009,6 +1063,8 @@ class NetModel:
             self.model = model_conjoin_lstm_r()
         elif config['network_type'] == const.NET_TYPE_CONJOINwL_S:
             self.model = model_conjoin_lstm_s()
+        elif config['network_type'] == const.NET_TYPE_ZIG_CLASSIFI:
+            self.model = model_zigzag_classifier()
         else:
             exit('ERROR: Invalid neural network type.')
 
@@ -1033,9 +1089,16 @@ class NetModel:
         else:
             learning_rate = config['cnn_lr']
         decay = config['decay']
-        self.model.compile(loss=losses.mean_squared_error,
-                    optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
-                    metrics=['accuracy'])
+
+        if config['network_type'] == const.NET_TYPE_ZIG_CLASSIFI:    
+            self.model.compile(loss=losses.binary_crossentropy,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay), 
+                        metrics=['accuracy'])
+        
+        else:
+            self.model.compile(loss=losses.mean_squared_error,
+                        optimizer=optimizers.Adam(lr=learning_rate, decay=decay, clipvalue=1), 
+                        metrics=['accuracy'])
 
 
     ###########################################################################

@@ -10,15 +10,15 @@ version: 0.92
 ## neural network 
 
 # network definition
-network_type: 43       # refer to neural_net/const.py
+network_type: 44       # refer to neural_net/const.py
 gpus: 0
 
 weight_load: False
 
 lstm: False
 lstm_timestep: 5
-lstm_dataterm: 1
-data_timegap: 3       # seconds
+lstm_dataterm: 30
+data_timegap: 1       # seconds
 lstm_lr: 0.0001        # 
 
 cnn_lr:  0.0001          # default of Adam is 0.001
@@ -31,8 +31,8 @@ samples_per_bin: 500
 # training 
 # data_shuffle: True
 validation_rate: 0.3
-num_epochs: 300
-batch_size: 1
+num_epochs: 3000
+batch_size: 64
 num_inputs: 1     # input: image, velocity
 num_outputs: 1    # output: steering_angle, throttle
 early_stopping_patience: 200

@@ -23,7 +23,10 @@ class DriveData:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 'brake', 
                     'linux_time', 
                     'vel', 'vel_x', 'vel_y', 'vel_z',
-                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y']
+                    'pos_x', 'pos_y', 'pos_z', 'accel_x', 'accel_y', 'zigzag',
+                    'img_n1', 'img_n2', 'img_n3', 'img_n4',
+                    'str_n1', 'str_n2', 'str_n3', 'str_n4',
+                    ]
     else:
         csv_header = ['image_fname', 'steering_angle', 'throttle', 
                     'linux_time', 
@@ -39,6 +42,15 @@ class DriveData:
         self.velocities = []
         self.velocities_xyz = []
         self.positions_xyz = []
+        self.zigzag = []
+        self.img_n1 = []
+        self.img_n2 = []
+        self.img_n3 = []
+        self.img_n4 = []
+        self.str_n1 = []
+        self.str_n2 = []
+        self.str_n3 = []
+        self.str_n4 = []
 
     def read(self, read = True, show_statistics = True, normalize = True):
         self.df = pd.read_csv(self.csv_fname, names=self.csv_header, index_col=False)
@@ -135,6 +147,15 @@ class DriveData:
                 self.positions_xyz.append((float(self.df.loc[i]['pos_x']), 
                                             float(self.df.loc[i]['pos_y']), 
                                             float(self.df.loc[i]['pos_z'])))
+                self.zigzag.append((float(self.df.loc[i]['zigzag'])))
+                self.img_n1.append(self.df.loc[i]['img_n1'])
+                self.img_n2.append(self.df.loc[i]['img_n2'])
+                self.img_n3.append(self.df.loc[i]['img_n3'])
+                self.img_n4.append(self.df.loc[i]['img_n4'])
+                self.str_n1.append(float(self.df.loc[i]['str_n1']))
+                self.str_n2.append(float(self.df.loc[i]['str_n2']))
+                self.str_n3.append(float(self.df.loc[i]['str_n3']))
+                self.str_n4.append(float(self.df.loc[i]['str_n4']))
 
 
     def get_data_path(self):
