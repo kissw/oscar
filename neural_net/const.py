@@ -46,9 +46,6 @@ NET_TYPE_PILOT_S_3  = 41
 NET_TYPE_PILOT_S_7  = 42
 NET_TYPE_PILOT_S_9  = 43
 
-
-NET_TYPE_ZIG_CLASSIFI = 44
-
 # file extension
 DATA_EXT             = '.csv'
 IMAGE_EXT            = '.jpg'

@@ -28,24 +28,20 @@ class DriveRun:
    ###########################################################################
     #
     def run(self, input): # input is (image, (vel))
-        if Config.neural_net['network_type'] == 44:
-            # imgs = input[0]
-            # strs = input[1]
-            predict = self.net_model.model.predict(input)
+        
+        image = input[0]
+        if Config.neural_net['num_inputs'] == 2:
+            velocity = input[1]
+        np_img = np.expand_dims(image, axis=0)
+        
+        if Config.neural_net['num_inputs'] == 2:
+            velocity = np.array(velocity).reshape(-1, 1)
+            predict = self.net_model.model.predict([np_img, velocity])
         else:
-            image = input[0]
-            if Config.neural_net['num_inputs'] == 2:
-                velocity = input[1]
-            np_img = np.expand_dims(image, axis=0)
-            
-            if Config.neural_net['num_inputs'] == 2:
-                velocity = np.array(velocity).reshape(-1, 1)
-                predict = self.net_model.model.predict([np_img, velocity])
-            else:
-                predict = self.net_model.model.predict(np_img)
-            # calc scaled steering angle
-            steering_angle = predict[0][0]
-            steering_angle /= Config.neural_net['steering_angle_scale']
-            predict[0][0] = steering_angle
+            predict = self.net_model.model.predict(np_img)
+        # calc scaled steering angle
+        steering_angle = predict[0][0]
+        steering_angle /= Config.neural_net['steering_angle_scale']
+        predict[0][0] = steering_angle
 
         return predict
