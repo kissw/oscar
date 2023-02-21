@@ -60,7 +60,7 @@ def main(data_path):
     bar = ProgressBar()
 
     new_csv = []
-    for i in bar(range(num_data-1)): # we don't have a title
+    for i in bar(range(1, num_data-1)): # we don't have a title
         # print(i)
         current_image_path = data_path + data.df.loc[i]['image_fname']
         
@@ -104,7 +104,8 @@ def main(data_path):
                         + str(data.df.loc[i+frame]['image_fname']) + ','
                         + str(float(s)) + ','
                         + str(float(v)) + ',' 
-                        + str(float(t)) + '\n')
+                        + str(float(t)) + ','
+                        + str(data.image_names[i-1]) + '\n')
 
     # write a new csv
     new_csv_fh = open(data_path + folder_name + '_imgen' + const.DATA_EXT, 'w')
