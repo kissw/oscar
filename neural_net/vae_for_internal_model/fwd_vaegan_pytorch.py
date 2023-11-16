@@ -279,8 +279,8 @@ class InternalModel(nn.Module):
         min_loss = float('inf')  # 이전 에포크의 최소 손실을 저장할 변수 초기화
 
         for epoch in range(epochs):
-            epoch_vae_loss = 0.0  # 에포크별 평균 손실을 계산하기 위한 변수
-            epoch_disc_loss = 0.0  # 에포크별 평균 손실을 계산하기 위한 변수
+            epoch_vae_loss = 0.0
+            epoch_disc_loss = 0.0
             for i, data in enumerate(train_data_loader, 0):
                 img, tar_img, tar_str, tar_vel, tar_time = [x.to(device) for x in data.values()]
                 img = img.unsqueeze(1)
@@ -308,10 +308,10 @@ class InternalModel(nn.Module):
                 disc_loss.backward()
                 self.optimizer_disc.step()
 
-                epoch_vae_loss += vae_loss.item()  # 에포크별 손실 누적
-                epoch_disc_loss += disc_loss.item()  # 에포크별 손실 누적
+                epoch_vae_loss += vae_loss.item()
+                epoch_disc_loss += disc_loss.item()
                 # 일정 반복마다 현재 손실 출력
-                if (i+1) % 100000 == 0:  # 매 100번째 반복마다
+                if (i+1) % 100000 == 0:
                     # print(f'[{epoch + 1}, {i+1}] vae: {epoch_vae_loss / (i+1):.3f}, disc: {epoch_disc_loss / (i+1):.3f}')
                     cur_output = f'\r[{epoch + 1}, {i + 1}] vae: {epoch_vae_loss / (i + 1):.3f}, disc: {epoch_disc_loss / (i + 1):.3f}'
                     sys.stdout.write(cur_output)
@@ -328,11 +328,11 @@ class InternalModel(nn.Module):
                 with torch.no_grad():
                     reconstructed_img, _, _ = self.forward_vae(img, tar_str, tar_vel, tar_time)
                 self.plot_images(reconstructed_img[:10].cpu(), epoch+1, 1, f'Epoch {epoch+1}', window_id=1)
-            sys.stdout.write('\n')  # 새 줄 시작
+            sys.stdout.write('\n')
             # print(f'Epoch {epoch+1}, vae: {epoch_vae_loss / len(train_data_loader):.4f}, disc: {epoch_disc_loss / len(train_data_loader):.4f}')
             cur_output = f'\rEpoch {epoch+1}, vae: {epoch_vae_loss / len(train_data_loader):.4f}, disc: {epoch_disc_loss / len(train_data_loader):.4f}'
             sys.stdout.write(cur_output)
-            sys.stdout.write('\n')  # 새 줄 시작
+            sys.stdout.write('\n')
 
 def load_model_for_training(model, checkpoint_path, train_data_loader, epochs, device):
     # 모델 상태 로드
