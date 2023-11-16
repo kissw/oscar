@@ -1,2 +1,0 @@
-['Straight', 'Straight']
-['2000', '50']
