@@ -1,4 +1,4 @@
-name: im
+name: torch
 channels:
   - pytorch
   - conda-forge

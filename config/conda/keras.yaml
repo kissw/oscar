@@ -1,4 +1,4 @@
-name: vae
+name: keras
 channels:
   - nvidia/label/cuda-11.3.1
   - anaconda
