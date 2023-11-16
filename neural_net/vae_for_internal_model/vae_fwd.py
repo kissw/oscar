@@ -30,7 +30,7 @@ tf.compat.v1.keras.backend.set_session(sess)
 
 # -----
 
-batch_size = 8
+batch_size = 8 #but using image flip aug, batch * 2
 """
 ## Encoder
 """
