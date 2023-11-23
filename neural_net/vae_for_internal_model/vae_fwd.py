@@ -30,7 +30,7 @@ tf.compat.v1.keras.backend.set_session(sess)
 
 # -----
 
-batch_size = 8 #but using image flip aug, batch * 2
+batch_size = 6 #but using image flip aug, batch * 2
 """
 ## Encoder
 """
@@ -48,10 +48,10 @@ class Sampling(layers.Layer):
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-encoder_inputs_img = tf.keras.Input(batch_shape=(batch_size*2, 1, 160, 160, 3))
-encoder_inputs_str = tf.keras.Input(batch_shape=(batch_size*2, 1, 1))
-encoder_inputs_vel = tf.keras.Input(batch_shape=(batch_size*2, 1, 1))
-encoder_inputs_time = tf.keras.Input(batch_shape=(batch_size*2, 1, 1))
+encoder_inputs_img = tf.keras.Input(batch_shape=(batch_size, 1, 160, 160, 3))
+encoder_inputs_str = tf.keras.Input(batch_shape=(batch_size, 1, 1))
+encoder_inputs_vel = tf.keras.Input(batch_shape=(batch_size, 1, 1))
+encoder_inputs_time = tf.keras.Input(batch_shape=(batch_size, 1, 1))
 x = layers.TimeDistributed(layers.Conv2D(24, (5, 5), padding='same', name='conv2d_1'))(encoder_inputs_img)
 x = layers.TimeDistributed(layers.BatchNormalization())(x)
 x = layers.TimeDistributed(layers.Activation('elu'))(x)
@@ -92,7 +92,7 @@ fc_t2  = layers.TimeDistributed(layers.Dense(50))(fc_t1)
 fc_t2  = layers.TimeDistributed(layers.BatchNormalization())(fc_t2)
 fc_t2  = layers.TimeDistributed(layers.Activation('elu'))(fc_t2)
 conc_1 = layers.concatenate([latent, fc_s2, fc_v2, fc_t2])
-bilstm = layers.Bidirectional(layers.LSTM(500, batch_size=batch_size*2, stateful=True))(conc_1)
+bilstm = layers.Bidirectional(layers.LSTM(500, batch_size=batch_size, stateful=True))(conc_1)
 # bilstm = layers.Bidirectional(layers.LSTM(500, input_shape=(1000, 1), batch_size=10, stateful=True))(conc_1)
 fc_1   = layers.Dense(500)(bilstm)
 fc_1   = layers.Activation('elu')(fc_1)
@@ -132,7 +132,7 @@ Fwd.summary()
 # -----
 
 # load weight
-pretrained_path = '/home2/kdh/vae/new_dataset/vqvae2/vae_b64_mse_ckpt.1268-1218.8559.h5'
+pretrained_path = '/home2/kdh/vae/new_dataset/vae/vae_b6_ckpt.01-16439.2387.h5'
 Fwd.load_weights(pretrained_path)
 # -----
 
@@ -144,31 +144,29 @@ config = Config.neural_net
 from multiprocessing import Pool, cpu_count
 def process_row(row):
     image_name = row['image_fname']
-    measurements = (float(row['steering_angle']), float(row['throttle']), float(row['brake']))
-    velocity = float(row['vel'])
     tar_image_name = row['tar_image_fname']
     tar_steering_angle = float(row['tar_steering_angle'])
     tar_vel = float(row['tar_vel'])
     tar_time = float(row['tar_time'])
-    return (image_name, measurements, velocity, tar_image_name, tar_steering_angle, tar_vel, tar_time)
+    return (image_name, tar_image_name, tar_steering_angle, tar_vel, tar_time)
 
 def data_generator(data_path):
-
-    if data_path[-1] == '/':
-        data_path = data_path[:-1]
-
-    loc_slash = data_path.rfind('/')
-    if loc_slash != -1:  # there is '/' in the data path
-        model_name = data_path[loc_slash + 1:]  # get folder name
+    if 'csv' in data_path[-4:]:
+        csv_path = data_path
     else:
-        model_name = data_path
+        if data_path[-1] == '/':
+            data_path = data_path[:-1]
 
-    csv_path = data_path + '/' + model_name + const.DATA_EXT 
+        loc_slash = data_path.rfind('/')
+        if loc_slash != -1:  # there is '/' in the data path
+            model_name = data_path[loc_slash + 1:]  # get folder name
+        else:
+            model_name = data_path
+
+        csv_path = data_path + '/' + model_name + const.DATA_EXT 
 
     csv_header = [
-        'image_fname', 'steering_angle', 'throttle', 'brake', 'linux_time', 
-        'vel', 'vel_x', 'vel_y', 'vel_z', 'pos_x', 'pos_y', 'pos_z', 
-        'tar_image_fname', 'tar_steering_angle', 'tar_vel', 'tar_time'
+        'image_num','image_fname', 'tar_image_fname', 'tar_steering_angle', 'tar_vel', 'tar_time'
     ]
 
     df = pd.read_csv(csv_path, names=csv_header, index_col=False)
@@ -179,30 +177,28 @@ def data_generator(data_path):
         results = p.map(process_row, [df.loc[i] for i in range(num_data)])
 
     # Separate the results into separate lists
-    df_image_names, df_measurements, df_velocities, df_tar_image_names, df_tar_steering_angle, df_tar_vel, df_tar_time = zip(*results)
+    df_image_names, df_tar_image_names, df_tar_steering_angle, df_tar_vel, df_tar_time = zip(*results)
 
     # -----
-    samples = list(zip(df_image_names, df_velocities, df_measurements, 
-                       df_tar_image_names, df_tar_steering_angle, df_tar_vel, df_tar_time))
+    samples = list(zip(df_image_names, df_tar_image_names, df_tar_steering_angle, df_tar_vel, df_tar_time))
     
     return samples
 
-traindata_path = "/home2/kdh/vae/new_dataset/2023-08-22-17-26-02/"
+traindata_path = "/home2/kdh/vae/new_dataset/2023-08-22-17-26-04/2023-08-22-17-26-04_train.csv"
 train_data = data_generator(traindata_path)
+validdata_path = "/home2/kdh/vae/new_dataset/2023-08-22-17-26-04/2023-08-22-17-26-04_test.csv"
+valid_data = data_generator(validdata_path)
 
-def flipping(img, tar_img, steering, tar_steering):
+def flipping(img, tar_img, tar_steering):
     flip_image = cv2.flip(img,1)
     flip_tar_image = cv2.flip(tar_img,1)
-    flip_steering = steering*-1.0
     flip_tar_steering = tar_steering*-1.0
-    return flip_image, flip_tar_image, flip_steering, flip_tar_steering
+    return flip_image, flip_tar_image, flip_tar_steering
 
 # -----
 
 def prepare_vae_batch_samples(batch_samples, data_path):
     images = []
-    steering_angles = []
-    vels = []
     tar_images = []
     tar_steering_angles = []
     tar_vels = []
@@ -210,14 +206,11 @@ def prepare_vae_batch_samples(batch_samples, data_path):
 
 
     batch_images = []
-    batch_steering_angles = []
-    batch_vels = []
-    batch_tar_images = []
     batch_tar_steering_angles = []
     batch_tar_vels = []
     batch_tar_times = []
         
-    for image_name, velocity, measurement, tar_image_name, tar_steering_angle, tar_vel, tar_time in batch_samples:
+    for image_name, tar_image_name, tar_steering_angle, tar_vel, tar_time in batch_samples:
         # self.data.image_names, self.data.velocities, self.data.measurements, 
         # self.data.tar_image_names, self.data.tar_steering_angle, self.data.tar_vel, self.data.tar_time
         
@@ -243,34 +236,26 @@ def prepare_vae_batch_samples(batch_samples, data_path):
         image = image_process.process(image)
         tar_image = image_process.process(tar_image)
 
-        batch_vels.append(velocity)
         batch_tar_vels.append(tar_vel)
         batch_tar_times.append(tar_time)
         batch_tar_steering_angles.append(tar_steering_angle)
-        # if no brake data in collected data, brake values are dummy
-        steering_angle, throttle, brake = measurement
-        batch_steering_angles.append(steering_angle)
         batch_images.append(image)
         tar_images.append(tar_image)
 
         #### flip aug
-        flip_image, flip_tar_image, flip_steering_angle, flip_tar_steering_angle = flipping(image, tar_image, steering_angle, tar_steering_angle)
-        batch_vels.append(velocity)
-        batch_tar_vels.append(tar_vel)
-        batch_tar_times.append(tar_time)
-        batch_tar_steering_angles.append(flip_tar_steering_angle)
-        batch_steering_angles.append(flip_steering_angle)
-        batch_images.append(flip_image)
-        tar_images.append(flip_tar_image)
+        # flip_image, flip_tar_image, flip_tar_steering_angle = flipping(image, tar_image, tar_steering_angle)
+        # batch_tar_vels.append(tar_vel)
+        # batch_tar_times.append(tar_time)
+        # batch_tar_steering_angles.append(flip_tar_steering_angle)
+        # batch_images.append(flip_image)
+        # tar_images.append(flip_tar_image)
 
 
     images.append(batch_images)
-    steering_angles.append(batch_steering_angles)
-    vels.append(batch_vels)
     tar_steering_angles.append(batch_tar_steering_angles)
     tar_vels.append(batch_tar_vels)
     tar_times.append(batch_tar_times)
-    return images, vels, steering_angles, tar_images, tar_steering_angles, tar_vels, tar_times
+    return images, tar_images, tar_steering_angles, tar_vels, tar_times
 
 
 # -----
@@ -286,7 +271,7 @@ def _generator(samples, batch_size=10, data_path=None):
         for offset in range(0, (num_samples//batch_size)*batch_size, batch_size):
             batch_samples = samples[offset:offset+batch_size]
 
-            images, vels, steering_angles, tar_images, tar_steering_angles, tar_vels, tar_times = prepare_vae_batch_samples(batch_samples, data_path)
+            images, tar_images, tar_steering_angles, tar_vels, tar_times = prepare_vae_batch_samples(batch_samples, data_path)
 
             X_img = np.array(images).astype("float32")/255.0
             X_tvel = np.array(tar_vels).astype("float32")
@@ -306,14 +291,17 @@ def _generator(samples, batch_size=10, data_path=None):
             # print(y_train.shape)
             yield X_train, y_train
 
-train_data, valid_data = train_test_split(train_data, test_size=0.2)
+# train_data, valid_data = train_test_split(train_data, test_size=0.2)
 # train_data = train_samples
 # valid_data = valid_samples
 # train_data, valid_data = train_test_split(samples, test_size=0.5)
 # train_data = samples
 # _, valid_data = train_test_split(samples, test_size=0.2, shuffle=True)
-train_generator = _generator(train_data, batch_size, traindata_path)
-valid_generator = _generator(valid_data, batch_size, traindata_path)
+# train_generator = _generator(train_data, batch_size, traindata_path)
+# valid_generator = _generator(valid_data, batch_size, validdata_path)
+train_generator = _generator(train_data, batch_size, '/home2/kdh/vae/new_dataset/2023-08-22-17-26-04')
+valid_generator = _generator(valid_data, batch_size, '/home2/kdh/vae/new_dataset/2023-08-22-17-26-04')
+
 # valid_generator = _generator(valid_data, batch_size, validdata_path)
 
 
@@ -358,7 +346,7 @@ Fwd.compile(optimizer=optimizer,
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 callbacks = []
-model_ckpt_name = "/home2/kdh/vae/new_dataset/vae/vae_b64_mse_load_timeadd"
+model_ckpt_name = "/home2/kdh/vae/new_dataset/vae/vae_b6"
 checkpoint = ModelCheckpoint(model_ckpt_name +'_ckpt.{epoch:02d}-{val_loss:.4f}.h5',
                                 monitor='val_loss', 
                                 verbose=1, save_best_only=True, mode='min')
